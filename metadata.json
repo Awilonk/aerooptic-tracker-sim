@@ -1,5 +1,0 @@
-{
-  "name": "AeroOptic Tracker Sim",
-  "description": "A 3D simulation and visualization of an airborne photoelectric tracking system, demonstrating the multi-stage coupling dynamics between aircraft, gimbal, and fast steering mirror.",
-  "requestFramePermissions": []
-}
