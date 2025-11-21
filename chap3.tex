@@ -1,0 +1,455 @@
+\chapter{系统多源干扰量化分析}\label{chap:3}
+
+\section{分析总体概述}
+
+
+第一章建立了系统的多级联合标称模型，第二章则详细表征了系统的"干扰库"。为全面理解这些干扰的机理及其对系统性能的耦合作用，本章将构建一个集成了第 1 章标称模型与第 2 章全部干扰项的全功能仿真平台，开展干扰传递量化分析。
+
+本章将采用"单一干扰注入法"，并结合参数摄动蒙特卡洛数值仿真，从幅值特性（均值、标准差、均方根）、频率特性（频谱瀑布图）、误差角空间分布以及概率分布等多个维度，对各独立干扰及多源组合干扰的影响进行量化。其分析结论，即"工况-主导干扰"的映射关系，将作为第四章构建特定工况分析模型的直接依据。
+
+\section{单一干扰特性量化分析}
+
+本节旨在通过仿真直观展示第二章所建立干扰模型的动态特性，并辅以量化分析，为后续理解奠定基础。
+
+\subsection{环境大气扰动仿真}
+为量化风扰力矩特性，本文开展了500组蒙特卡洛仿真，其统计结果如图\ref{fig:wind_mc_stats}所示。从图中可以看出，各轴向的风扰力矩均值在零点附近小范围波动，其绝对值小于$2 \times 10^{-3}$ Nm，表明风扰不产生显著的直流偏置。其标准差与均方根值则显著大于均值，表明干扰以动态波动为主要表现形式。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/Wind_Turbulence_Figure_01.png}
+    \caption{大气紊流干扰统计特性分析（500组蒙特卡洛仿真）}
+    \label{fig:wind_mc_stats}
+\end{figure}
+
+图\ref{fig:wind_mc_fft}进一步展示了X轴与Y轴风扰力矩的频谱瀑布图。从频域上看，风扰能量绝大部分集中在10Hz以下的低频段，这与第二章所述Dryden湍流模型的低通滤波特性相符。在500组仿真测试中，频谱形态表现出高度的一致性，高频分量的幅值则快速衰减，说明其频率特性受参数摄动影响较小。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[X轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Wind_Turbulence_Figure_02.png}}
+    \quad
+    \subfigure[Y轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Wind_Turbulence_Figure_03.png}}
+    \caption{大气紊流干扰频域特性（500组蒙特卡洛仿真）}
+    \label{fig:wind_mc_fft}
+\end{figure}
+
+为进一步分析大气扰动对系统最终指向精度的影响，将上述大气紊流干扰注入机载光电跟踪系统多级回路模型，设定典型飞行工况。500组蒙特卡洛仿真的最终指向不确定区域分布如图\ref{fig:wind_pointing_dist}所示。图中分别展示了指向误差均值、标准差与均方根值在方位-俯仰平面上的空间分布特性。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[指向误差均值分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab大气扰动scatter_mean.png}}
+    \subfigure[指向误差标准差分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab大气扰动scatter_std.png}}
+    \subfigure[指向误差RMS分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab大气扰动scatter_rms.png}}
+    \caption{大气紊流导致指向角误差空间分布（500组蒙特卡洛仿真）}
+    \label{fig:wind_pointing_dist}
+\end{figure}
+
+为从概率角度量化其影响，统计500组仿真数据的综合指向角误差均方根值，得到其概率密度分布如图\ref{fig:wind_pointing_hist_rms}所示。根据统计结果，68.26\%（1σ）的角度误差均方根值集中在13712.77 μrad之内，95.44\%（2σ）的角度误差均方根值集中在13728.56 μrad之内。
+
+\clearpage
+\subsection{载机振动频谱分析}
+为分析载机振动性质，以采集的振动数据为例进行快速傅里叶变换。如图~\ref{fig:vibration_spectrum_3d}所示，结果显示其频谱变化不大，说明振动较为均匀，主要能量集中在100Hz至500Hz的频率范围内。低频区（0-100Hz）的总能量占比最大。同时，500-600Hz处的陡峭高峰说明此频段存在高频瞬态冲击。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/大气扰动_prob_rms.png}
+    \caption{大气紊流导致指向角误差RMS概率分布（500组蒙特卡洛仿真）}
+    \label{fig:wind_pointing_hist_rms}
+\end{figure}
+
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{pic_new/image131.png}
+    \caption{载机振动三维频谱图}
+    \label{fig:vibration_spectrum_3d}
+\end{figure}
+
+上述载机振动通过式\eqref{eq:vib_base}和\eqref{eq:acc_elevation}传递至伺服框架，并由式\eqref{eq:unbalanced_torque_e}和\eqref{eq:unbalanced_torque_a}所表征的质量偏心转化为未配平力矩。为量化此干扰，本文同样开展了500组蒙特卡洛仿真。
+
+未配平力矩的统计特性如图\ref{fig:unbalanced_mc_stats}所示。从图中可见，方位轴的力矩均值（约2.5 Nm）和均方根值（约2.8 Nm）显著大于俯仰轴（均值和均方根值均约1.8 Nm）。两轴的标准差均相对较小（小于0.4 Nm），这表明在参数摄动影响下，未配平力矩主要表现为大小不同但相对稳定的直流偏置力矩。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/Unbalanced_Torque_Figure_01.png}
+    \caption{未配平力矩干扰统计特性分析（500组蒙特卡洛仿真）}
+    \label{fig:unbalanced_mc_stats}
+\end{figure}
+
+图\ref{fig:unbalanced_mc_fft}展示了其频域特性。与图\ref{fig:wind_mc_fft}的风扰特性不同，未配平力矩的能量不仅集中在低频，还在多个谐波频率点表现出显著的峰值。这些峰值的分布与图\ref{fig:vibration_spectrum_3d}中分析的载机振动主导频率基本一致，这清晰地验证了式\eqref{eq:unbalanced_torque_e}所述的传递机理，即载机结构振动是未配平力矩干扰的主要激励源。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[方位轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Unbalanced_Torque_Figure_02.png}}
+    \quad
+    \subfigure[俯仰轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Unbalanced_Torque_Figure_03.png}}
+    \caption{未配平力矩干扰频域特性（500组蒙特卡洛仿真）}
+    \label{fig:unbalanced_mc_fft}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[指向误差均值分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab载机振动_未配平力矩scatter_mean.png}}
+    \subfigure[指向误差标准差分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab载机振动_未配平力矩scatter_std.png}}
+    \subfigure[指向误差RMS分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab载机振动_未配平力矩scatter_rms.png}}
+    \caption{载机振动与未配平力矩导致指向角误差空间分布（500组蒙特卡洛仿真）}
+    \label{fig:unbalanced_pointing_dist}
+\end{figure}
+
+将载机振动与未配平力矩干扰注入系统模型，同样设定典型工况，其最终指向不确定区域分布如图\ref{fig:unbalanced_pointing_dist}所示。图中分别展示了500组仿真下，指向误差均值、标准差与均方根值的空间分布。
+
+
+为从概率角度量化其影响，统计其综合指向角误差均方根值，得到概率密度分布如图\ref{fig:unbalanced_pointing_hist_rms}所示。根据统计结果，68.26\%（1σ）的角度误差均方根值集中在13712.77 μrad之内，95.44\%（2σ）的角度误差均方根值集中在13728.56 μrad之内。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/载机振动_未配平力矩_prob_rms.png}
+    \caption{载机振动与未配平力矩导致指向角误差RMS概率分布（500组蒙特卡洛仿真）}
+    \label{fig:unbalanced_pointing_hist_rms}
+\end{figure}
+
+\subsection{转轴摩擦特性量化分析}
+LuGre模型\eqref{eq:lugre_model}可以刻画Stribeck效应、摩擦滞后等复杂的非线性现象。图~\ref{fig:stribeck_effect}直观展示了模型的特性。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.3\textwidth]{pic_new/image155.png}
+    \caption{LuGre摩擦模型的Stribeck效应}
+    \label{fig:stribeck_effect}
+\end{figure}
+
+为进一步量化摩擦参数不确定性的影响，对LuGre模型中的关键参数如 $T_{c},T_{s},\omega_{s}$ 等进行参数摄动仿真。为量化此影响，本文进行了500组蒙特卡洛仿真。仿真中，LuGre模型（式\eqref{eq:lugre_model}）的关键参数在标称值附近$\pm 10\%$范围内随机摄动，并给定随机低频角速度输入。
+
+仿真结果的统计特性如图\ref{fig:friction_mc_stats}所示。从图中可以看出，方位轴与俯仰轴的摩擦力矩均值在零点附近小范围波动，其绝对值小于0.04 Nm。然而，其标准差与均方根值则显著较大，均值在1.0 Nm左右，这表明摩擦力矩在参数摄动下呈现出强烈的动态波动，而非一个恒定的偏置。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/Friction_Figure_01.png}
+    \caption{转轴摩擦干扰统计特性分析（500组蒙特卡洛仿真）}
+    \label{fig:friction_mc_stats}
+\end{figure}
+
+为进一步分析其频域特性，图\ref{fig:friction_mc_fft}展示了500组仿真测试中两轴摩擦力矩的频谱瀑布图。从频域上看，摩擦干扰的能量主要集中在0-25Hz的低中频段。与式\eqref{eq:lugre_model}的分析一致，受转轴摩擦复杂非线性动态的影响，干扰频谱并非单一频率，而是表现为在多个谐波频率点上的复杂分布，且各次仿真的频谱形态因参数摄动而有所不同。这验证了摩擦干扰的强非线性特性，在设计控制器时不能将其简化为线性粘性阻尼。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[方位轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Friction_Figure_02.png}}
+    \quad
+    \subfigure[俯仰轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Friction_Figure_03.png}}
+    \caption{转轴摩擦干扰频域特性（500组蒙特卡洛仿真）}
+    \label{fig:friction_mc_fft}
+\end{figure}
+
+% TODO: 补充转轴摩擦非线性特性扫频仿真的内容和图片
+% 为了进一步从频域揭示转轴摩擦的非线性特性，本文对仅含LuGre摩擦的伺服框架进行扫频仿真。仿真中采用第四章所述的工况一模型，即标称模型附加LuGre摩擦模型，并对方位框架给定低频正弦跟踪指令 $\theta_d = 0.5 \sin(0.5 t)$ rad，同时关闭所有其他干扰。
+% 
+% 图~\ref{fig:friction_fft_placeholder}中展示了该仿真下的跟踪误差时域波形及其FFT频谱分析结果。从频谱图中可以观察到，尽管输入信号为单一频率，但跟踪误差的频谱在基频之外，清晰地显示出了三倍频、五倍频等高次谐波分量。这种线性输入产生多频率输出的现象是强非线性系统的典型特征，有力地证明了转轴摩擦在低速摆动工况下的非线性特性是主导因素，不能将其简化为线性粘性阻尼。
+% 
+% \begin{figure}[!htbp]
+% \centering
+% \includegraphics[width=0.8\textwidth]{pic_new/image177.png} % Placeholder image
+% \caption{转轴摩擦非线性特性扫频仿真（(a) 时域跟踪误差 (b) 误差FFT频谱）}
+% \label{fig:friction_fft_placeholder}
+% \end{figure}
+
+为分析转轴摩擦对最终指向精度的影响，将LuGre摩擦模型注入系统，其500组蒙特卡洛仿真的最终指向不确定区域分布如图\ref{fig:friction_pointing_dist}所示。图中分别展示了指向误差均值、标准差与均方根值的空间分布。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[指向误差均值分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab转轴非线性摩擦scatter_mean.png}}
+    \subfigure[指向误差标准差分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab转轴非线性摩擦scatter_std.png}}
+    \subfigure[指向误差RMS分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab转轴非线性摩擦scatter_rms.png}}
+    \caption{转轴非线性摩擦导致指向角误差空间分布（500组蒙特卡洛仿真）}
+    \label{fig:friction_pointing_dist}
+\end{figure}
+
+为从概率角度量化其影响，统计其综合指向角误差均方根值，得到概率密度分布如图\ref{fig:friction_pointing_hist_rms}所示。根据统计结果，68.26\%（1σ）的角度误差均方根值集中在40420.82 μrad之内，95.44\%（2σ）的角度误差均方根值集中在45105.22 μrad之内。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/转轴非线性摩擦_prob_rms.png}
+    \caption{转轴非线性摩擦导致指向角误差RMS概率分布（500组蒙特卡洛仿真）}
+    \label{fig:friction_pointing_hist_rms}
+\end{figure}
+
+\subsection{伺服电机力矩波动量化分析}
+伺服框架层的另一主要干扰源是第二章 2.2.1 节所表征的电机力矩波动（式\eqref{eq:motor_model}）。为量化此干扰，本文开展了500组蒙特卡洛仿真，结果如图\ref{fig:servo_mc_stats}所示。
+
+从统计特性上看，方位轴与俯仰轴的力矩波动均值均在零点附近，其绝对值小于 $5 \times 10^{-4}$ Nm，表明其不产生直流偏置。其标准差与均方根值则量级显著更高，均值在 0.05 Nm 左右，表明力矩波动以动态形式为主。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/Servo_Fluctuation_Figure_01.png}
+    \caption{伺服电机力矩波动干扰统计特性分析（500组蒙特卡洛仿真）}
+    \label{fig:servo_mc_stats}
+\end{figure}
+
+图\ref{fig:servo_mc_fft}中的频域瀑布图显示，伺服电机力矩波动的能量主要集中在 20 Hz 到 80 Hz 的中频段，并在约 70 Hz 处呈现出显著的谐波峰值。这与式\eqref{eq:motor_model}中由电气动态（电感、电阻）和PWM驱动信号共同引起的波动特性相符，是伺服框架中频扰动的主要来源之一。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[方位轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Servo_Fluctuation_Figure_02.png}}
+    \quad
+    \subfigure[俯仰轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Servo_Fluctuation_Figure_03.png}}
+    \caption{伺服电机力矩波动干扰频域特性（500组蒙特卡洛仿真）}
+    \label{fig:servo_mc_fft}
+\end{figure}
+
+为分析伺服电机力矩波动对系统最终指向精度的影响，将该干扰注入多级回路模型。500组蒙特卡洛仿真的最终指向不确定区域分布如图\ref{fig:servo_pointing_dist}所示。图中分别展示了指向误差均值、标准差与均方根值的空间分布特性。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[指向误差均值分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab伺服电机力矩波动_scatter_mean.png}}
+    \subfigure[指向误差标准差分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab伺服电机力矩波动_scatter_std.png}}
+    \subfigure[指向误差RMS分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab伺服电机力矩波动_scatter_rms.png}}
+    \caption{伺服电机力矩波动导致指向角误差空间分布（500组蒙特卡洛仿真）}
+    \label{fig:servo_pointing_dist}
+\end{figure}
+
+为从概率角度量化其影响，统计500组仿真数据的综合指向角误差均方根值，得到其概率密度分布如图\ref{fig:servo_pointing_hist_rms}所示。根据统计结果，68.26\%（1σ）的角度误差均方根值集中在13712.77 μrad之内，95.44\%（2σ）的角度误差均方根值集中在13728.56 μrad之内。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/伺服电机力矩波动_prob_rms.png}
+    \caption{伺服电机力矩波动导致指向角误差RMS概率分布（500组蒙特卡洛仿真）}
+    \label{fig:servo_pointing_hist_rms}
+\end{figure}
+
+\subsection{快反镜PZT迟滞效应仿真}
+压电陶瓷执行器存在显著的迟滞效应。基于Bouc-Wen模型\eqref{eq:bouc_wen_model}的仿真分析表明，压电陶瓷存在输入电压与输出位移之间的非线性迟滞回环特性。对模型中$\alpha, \beta, \gamma$等参数进行蒙特卡洛拉偏分析表明，这些参数的摄动将直接改变迟滞环的形状和宽度，在高速往复运动时对跟踪精度的影响尤为显著。
+
+% TODO: 补充PZT迟滞非线性特性分析的内容和图片
+% 为量化PZT迟滞模型在高动态跟踪下的非线性失真特性，我们对仅含Bouc-Wen迟滞模型的快反镜子系统进行仿真分析。仿真中对快反镜给定中频正弦指令 $\gamma_d = A \sin(50\pi t)$ 以模拟高动态跟踪任务。
+% 
+% 图~\ref{fig:pzt_fft_placeholder}展示了快反镜的跟踪误差及其FFT频谱。与摩擦干扰类似，PZT迟滞导致的跟踪误差频谱展现出极为丰富的谐波分量，其复杂度甚至高于摩擦谐波。这证明了PZT迟滞是高动态跟踪工况下的一个主要非线性干扰源。其在频域的复杂性说明，必须采用特定的非线性模型进行表征，简单的线性模型会完全丢失这些高频失真信息，这也为第四章中针对低空机动目标工况的建模提供了依据。
+% 
+% \begin{figure}[!htbp]
+% \centering
+% \includegraphics[width=0.8\textwidth]{pic_new/image177.png} % Placeholder image
+% \caption{PZT迟滞非线性特性分析（(a) 时域跟踪误差 (b) 误差FFT频谱）}
+% \label{fig:pzt_fft_placeholder}
+% \end{figure}
+
+为分析PZT迟滞对最终指向精度的影响，将Bouc-Wen迟滞模型注入系统，其500组蒙特卡洛仿真的最终指向不确定区域分布如图\ref{fig:pzt_pointing_dist}所示。图中分别展示了指向误差均值、标准差与均方根值的空间分布。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[指向误差均值分布]{\includegraphics[width=0.32\textwidth]{pic_new/PZT迟滞_matlab_scatter_mean.png}}
+    \subfigure[指向误差标准差分布]{\includegraphics[width=0.32\textwidth]{pic_new/PZT迟滞_matlab_scatter_std.png}}
+    \subfigure[指向误差RMS分布]{\includegraphics[width=0.32\textwidth]{pic_new/PZT迟滞_matlab_scatter_rms.png}}
+    \caption{PZT迟滞导致指向角误差空间分布（500组蒙特卡洛仿真）}
+    \label{fig:pzt_pointing_dist}
+\end{figure}
+
+为从概率角度量化其影响，统计其综合指向角误差均方根值，得到概率密度分布如图\ref{fig:pzt_pointing_hist_rms}所示。根据统计结果，68.26\%（1σ）的角度误差均方根值集中在13712.77 μrad之内，95.44\%（2σ）的角度误差均方根值集中在13728.56 μrad之内。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/PZT迟滞_prob_rms.png}
+    \caption{PZT迟滞导致指向角误差RMS概率分布（500组蒙特卡洛仿真）}
+    \label{fig:pzt_pointing_hist_rms}
+\end{figure}
+
+\subsection{VCM力矩波动量化分析}
+对于采用音圈电机（VCM）的精密跟踪层，其干扰源除了电气动态，还包括第二章 2.3.1 节所述的力矩波动（式\eqref{eq:1.18}）。图\ref{fig:vcm_mc_stats}展示了VCM力矩波动的蒙特卡洛仿真统计特性。
+
+与伺服电机类似，VCM的力矩波动均值也接近于零（绝对值小于 $1 \times 10^{-4}$ N）。其标准差和均方根值均值约为 0.25 N，表明其动态波动特性显著。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/VCM_Ripple_Figure_01.png}
+    \caption{VCM力矩波动干扰统计特性分析（500组蒙特卡洛仿真）}
+    \label{fig:vcm_mc_stats}
+\end{figure}
+
+图\ref{fig:vcm_mc_fft}的频域瀑布图显示，VCM的力矩波动呈现出与伺服电机截然不同的特性。其干扰能量分布在 0 Hz 至 500 Hz 的宽频带范围内，并在多个离散的频率点上表现为尖锐的谐波峰值。这与VCM的电气动态以及由磁场不均、线圈绕组不精密等物理来源导致的力矩纹波特性相符，是精密跟踪层必须抑制的高频干扰源。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[X轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/VCM_Ripple_Figure_02.png}}
+    \quad
+    \subfigure[Y轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/VCM_Ripple_Figure_03.png}}
+    \caption{VCM力矩波动干扰频域特性（500组蒙特卡洛仿真）}
+    \label{fig:vcm_mc_fft}
+\end{figure}
+
+为分析VCM力矩波动对系统最终指向精度的影响，将该干扰注入多级回路模型。500组蒙特卡洛仿真的最终指向不确定区域分布如图\ref{fig:vcm_pointing_dist}所示。图中分别展示了指向误差均值、标准差与均方根值的空间分布特性。
+\clearpage
+\begin{figure}[h]
+    \centering
+    \subfigure[指向误差均值分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlabVCM力矩波动_scatter_mean.png}}
+    \subfigure[指向误差标准差分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlabVCM力矩波动_scatter_std.png}}
+    \subfigure[指向误差RMS分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlabVCM力矩波动_scatter_rms.png}}
+    \caption{VCM力矩波动导致指向角误差空间分布（500组蒙特卡洛仿真）}
+    \label{fig:vcm_pointing_dist}
+\end{figure}
+
+为从概率角度量化其影响，统计500组仿真数据的综合指向角误差均方根值，得到其概率密度分布如图\ref{fig:vcm_pointing_hist_rms}所示。根据统计结果，68.26\%（1σ）的角度误差均方根值集中在13712.77 μrad之内，95.44\%（2σ）的角度误差均方根值集中在13728.56 μrad之内。
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/VCM力矩波动_prob_rms.png}
+    \caption{VCM力矩波动导致指向角误差RMS概率分布（500组蒙特卡洛仿真）}
+    \label{fig:vcm_pointing_hist_rms}
+\end{figure}
+
+
+\subsection{系统模型不确定性量化分析}
+第二章 \ref{sec:param_perturbation} 节已对系统各层级的模型参数不确定性（参数摄动）进行了表征（式\eqref{eq:param_pert_all}）。为量化其对最终响应的影响，本文开展了500组蒙特卡洛仿真，对各子系统的惯量、刚度、阻尼等关键参数施加$\pm 10\%$的随机摄动。
+
+图\ref{fig:param_mc_stats}展示了参数摄动引起的响应偏差统计特性。从图中可见，方位轴与俯仰轴的响应偏差均值均接近于零。俯仰轴的标准差（约0.012 rad）与均方根值（约0.02 rad）略大于方位轴，但两者均处于较小量级。这表明参数摄动本身不引起显著的直流漂移，其影响主要表现为动态响应的偏差。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/Param_Perturbation_Figure_01.png}
+    \caption{参数不确定性干扰统计特性分析（500组蒙特卡洛仿真）}
+    \label{fig:param_mc_stats}
+\end{figure}
+
+图\ref{fig:param_mc_fft}给出了响应偏差的频域特性。与风扰（图\ref{fig:wind_mc_fft}）类似，参数不确定性干扰的能量也主要集中在5Hz以下的低频段。这说明参数摄动主要影响系统的低频跟随特性，而对高频动态影响较小。在500组测试中，其频谱形态较为一致。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[方位轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Param_Perturbation_Figure_02.png}}
+    \quad
+    \subfigure[俯仰轴频域特性]{\includegraphics[width=0.48\textwidth]{pic_new/Param_Perturbation_Figure_03.png}}
+    \caption{参数不确定性干扰频域特性（500组蒙特卡洛仿真）}
+    \label{fig:param_mc_fft}
+\end{figure}
+
+为进一步分析模型参数不确定性对最终指向精度的影响，将参数摄动干扰注入机载光电跟踪系统多级回路模型，设定典型飞行工况。500组蒙特卡洛仿真的最终指向不确定区域分布如图\ref{fig:param_pointing_dist}所示。图中分别展示了指向误差均值、标准差与均方根值的空间分布特性。
+
+\begin{figure}[!htbp]
+    \centering
+    \subfigure[指向误差均值分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab参数不确定性_scatter_mean.png}}
+    \subfigure[指向误差标准差分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab参数不确定性_scatter_std.png}}
+    \subfigure[指向误差RMS分布]{\includegraphics[width=0.32\textwidth]{pic_new/matlab参数不确定性_scatter_rms.png}}
+    \caption{模型参数摄动导致指向角误差空间分布（500组蒙特卡洛仿真）}
+    \label{fig:param_pointing_dist}
+\end{figure}
+
+为从概率角度量化其影响，统计500组仿真数据的综合指向角误差均方根值，得到其概率密度分布如图\ref{fig:param_pointing_hist_rms}所示。根据统计结果，68.26\%（1σ）的角度误差均方根值集中在13712.77 μrad之内，95.44\%（2σ）的角度误差均方根值集中在13728.56 μrad之内。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/参数不确定性_prob_rms.png}
+    \caption{模型参数摄动导致指向角误差RMS概率分布（500组蒙特卡洛仿真）}
+    \label{fig:param_pointing_hist_rms}
+\end{figure}
+
+\section{多工况干扰影响量化分析}
+
+\subsection{仿真实验设计}
+为定量分析各干扰源在不同工况下的主导地位，本文采用``单一干扰注入法''进行仿真实验。
+
+首先，我们在全功能仿真平台上运行标称模型，即关闭所有干扰项，得到十种工况下的基准指向误差，该结果即为表\ref{tab:1}中``无干扰''列的数据。
+
+随后，针对每一种工况，我们保持场景不变，依次将第 2 章所述的六种主要干扰，即载机旋转、载机平移旋转、转轴摩擦、电机力矩波动、快反镜迟滞、外界风扰，分别独立地注入到仿真模型中。例如，在``3000米目标移动''工况下运行``标称模型+转轴摩擦''，记录其指向误差均方根值。通过此方法，我们共运行了 70 组仿真实验，其统计结果汇总于表\ref{tab:1}。
+
+\subsection{量化结果与分析}
+图~\ref{fig:19a}和图~\ref{fig:19b}画出了3000米作业高度下，系统在受扰情况下的一个典型运行状态。图~\ref{fig:19a}展示了系统的指向性能分析，包括方位轴、俯仰轴及总指向误差。图~\ref{fig:19b}则展示了该工况下各层级的动力学与干扰响应，包括载机角速度、框架角速度、转轴摩擦力矩和框架角加速度。
+
+\clearpage
+从图~\ref{fig:19a}的指向误差曲线中可以观察到，高动态跟踪任务导致了明显的周期性误差。
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.8\textwidth]{pic_new/3000m_moving_target_4subplots_part1_pointing.png}
+    \caption{3000米目标移动工况下多源干扰仿真分析——指向性能分析}
+    \label{fig:19a}
+    \vspace{-0.5em}
+\end{figure}
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.8\textwidth]{pic_new/3000m_moving_target_4subplots_part2_dynamics.png}
+    \caption{3000米目标移动工况下多源干扰仿真分析——动力学与干扰分析}
+    \label{fig:19b}
+    \vspace{-0.5em}
+\end{figure}
+
+表 \ref{tab:1} 中汇总了所有 70 组仿真实验的指向误差统计结果。可以看出目标移动工况下的误差显著大于目标静止工况，尤其在低飞行高度时。随着高度上升，大多数干扰的影响显著下降，这是由于低飞行高度时目标在视场中移动的范围更大更快，提升了跟随轨迹的难度。
+
+\begin{table}[!htb]
+\centering
+\caption{多工况下各种干扰单独影响视轴指向误差表}
+\label{tab:1}
+\begin{tabular}{ccccccccc}
+\hline
+\multicolumn{2}{c}{高度/是否移动} & 无干扰 & 载机旋转 & \makecell{载机平移\\旋转} & \makecell{转轴\\摩擦} & \makecell{电机力矩\\波动} & \makecell{快反镜\\迟滞} & \makecell{外界\\风扰} \\
+\hline
+\multirow{6}{*}{目标移动} & 500  & 24985 & 24993 & 25395 & 24989 & 69271 & 59876 & 26743 \\
+                        & 700  & 806   & 858   & 2198  & 846   & 5707  & 6179  & 850   \\
+                        & 1500 & 214   & 305   & 1973  & 336   & 1881  & 3082  & 243   \\
+                        & 3000 & 112   & 222   & 1951  & 299   & 972   & 1634  & 120   \\
+                        & 5000 & 69    & 201   & 1950  & 303   & 642   & 1016  & 76    \\
+                        & 8000 & 46    & 192   & 1957  & 309   & 484   & 667   & 52    \\
+\hline
+\multirow{6}{*}{目标固定} & 500  & 207   & 301   & 2014  & 255   & 3631  & 1606  & 225   \\
+                        & 700  & 22    & 236   & 2009  & 185   & 642   & 263   & 24    \\
+                        & 1500 & 23    & 224   & 1967  & 200   & 389   & 281   & 24    \\
+                        & 3000 & 22    & 200   & 1956  & 339   & 365   & 255   & 23    \\
+                        & 5000 & 22    & 193   & 1949  & 385   & 347   & 237   & 25    \\
+                        & 8000 & 22    & 189   & 1958  & 426   & 353   & 247   & 29    \\
+\hline
+\end{tabular}
+\end{table}
+
+\vspace{1em}
+为更直观地分析干扰的主导地位，将干扰注入导致的指向精度下降情况绘制成热力图，如图~\ref{fig:20}所示。该图的颜色标度反映了指向误差增益，而单元格内标注了表\ref{tab:1}中的误差均方根值（RMSE）。误差增益的数量级由以下公式计算得出：
+
+\begin{equation}
+\label{eq:gain_log10}
+G_{gain} = \log_{10} \left( \frac{RMSE_{disturbed}}{RMSE_{baseline}} \right)
+\end{equation}
+
+其中 $G_{gain}$ 代表误差增益的数量级。$RMSE_{disturbed}$ 是指在特定工况下施加单一干扰后测得的视轴指向误差均方根值。$RMSE_{baseline}$ 则是该工况下"无干扰"时的基准误差均方根值。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\textwidth]{pic_new/heatmap_new.png}
+    \caption{各种工况条件下不同干扰对指向精度影响热力图}
+    \label{fig:20}
+\end{figure}
+
+通过分析图~\ref{fig:20}可以总结出，光电跟踪系统的目标指向误差主要受到电机力矩波动、快反镜迟滞、载机平移旋转与转轴摩擦这四种干扰的影响。载机平移旋转干扰在目标静止工况下影响显著，例如在8000米静止工况下，其误差值达到1958 $\mu$rad，相比基准值22 $\mu$rad，增益接近1.95个数量级。快反镜迟滞干扰在目标移动工况中表现明显，在1500米移动工况下，误差从214 $\mu$rad 上升至 3082 $\mu$rad，增益约1.16个数量级。电机力矩波动干扰在中低空飞行时影响突出，在700米静止工况下，误差从22 $\mu$rad 剧增至 642 $\mu$rad，增益达1.47个数量级。转轴摩擦干扰则在5000米以上高空静止时影响最大，其在8000米静止工况的误差值426 $\mu$rad（基准22 $\mu$rad） 对应的增益约为1.29个数量级。
+
+\section{干扰交联耦合相关性分析}
+
+\subsection{仿真方法与相关性模型}
+前一节的分析揭示了单一干扰在不同工况下的主导地位，而本节旨在分析各干扰源在同时作用时的交联耦合关系。为此，我们选取"3000米高度目标移动工况"作为典型代表，在全功能仿真平台上将所有干扰源同时注入。我们记录仿真全过程的时域数据，包括最终的视轴指向误差，以及各层级内部的干扰信号。
+
+由于误差的数据呈偏态分布，单峰不明显，且长尾效应明显，故不宜采用皮尔逊系数评价相关性。斯皮尔曼相关性系数估计变量之间的单调关系，对异常值不敏感，且对数据的分布没有要求，故采用斯皮尔曼系数刻画误差和各干扰之间的相关性。其定义为：
+\begin{equation}
+\label{eq:4.1}
+\rho = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)}
+\end{equation}
+\begin{equation}
+\label{eq:4.2}
+d_i = \text{rank}(X_i) - \text{rank}(Y_i)
+\end{equation}
+
+\subsection{相关性结果分析}
+对误差和干扰之间的相关性系数分析并做热力分析如图~\ref{fig:21}所示。
+从视轴指向误差相关性分析：可以看出总加速度干扰和视轴误差相关性显著，与载机角加速度干扰、摩擦干扰影响也较为相关。期望角度变化的角速度也是影响误差的重要因素。
+从干扰间交联耦合分析：框架方位、偏航轴摩擦力矩分别和期望方位、偏航角速度显著正相关，与载机总加速度也较为相关。这与LuGre摩擦模型\eqref{eq:lugre_model}中摩擦动态是关于角速度的函数相吻合。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{pic_new/image177.png}
+    \caption{3000米高度目标移动工况下视轴指向误差斯皮尔曼相关系数热力图}
+    \label{fig:21}
+\end{figure}
+
+% TODO: 补充多源干扰频谱特性总结的内容和图片
+% 前述分析分别探究了单一干扰的特性，为全面理解多源干扰在频域的分布特性，本节对注入所有干扰的全功能模型进行仿真，并对最终的视轴指向误差进行频谱分析，从而为第四章的分工况建模提供最终依据。仿真选取"3000米目标移动"为典型工况，同时引入载机振动、摩擦、PZT迟滞及风扰等所有干扰。
+% 
+% 图~\ref{fig:full_fft_placeholder}展示了最终视轴指向误差的FFT频谱图。从图中可以清晰地观察到频谱分离的特征。在低频段（如0-20 Hz），能量主要集中表现为多个谐波峰值，结合前文分析，这部分能量主要归因于转轴摩擦和PZT迟滞的非线性特性。而在中高频段（如100-500 Hz），则存在一个显著的窄带能量集中区，这与3.2.2节分析的载机结构振动主导频率相对应。
+% 
+% 这一分析证明了机载光电系统的干扰是多源、异质且在频域上分离的。该结论直接印证了第四章中分工况建模的必要性与合理性：针对不同工况下能量占比不同的低频非线性干扰与高频振动干扰，必须采用不同的耦合模型和控制策略，单一的标称模型无法覆盖所有工况。
+% 
+% \begin{figure}[!htbp]
+% \centering
+% \includegraphics[width=0.8\textwidth]{pic_new/image177.png} % Placeholder image
+% \caption{全干扰下视轴指向误差FFT频谱}
+% \label{fig:full_fft_placeholder}
+% \end{figure}

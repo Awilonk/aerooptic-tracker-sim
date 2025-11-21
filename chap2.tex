@@ -1,0 +1,338 @@
+\chapter{多源干扰细化表征}\label{chap:2}
+
+机载光电跟踪系统在工作过程中，其指向精度受到来自外部环境、系统各组成层级的多种干扰因素的共同影响。为了全面理解这些干扰的机理及其对系统性能的耦合作用，本章将遵循第一章建立的三级物理结构，从干扰的来源出发，依次对载机层干扰、伺服框架层干扰以及精密跟踪层干扰进行详细的数学表征。最后，本章还将讨论系统性的模型参数不确定性。
+
+\section{载机层干扰}
+载机层是光电跟踪系统的搭载平台，其干扰主要来源于两个方面：外部环境作用在载机上的大气扰动，以及载机本身的结构振动。大气扰动通过气动力和气动力矩作用于载机，引起载机的姿态和运动状态变化；载机的结构振动则通过机械连接直接传递到光电系统。这两类干扰最终都通过载机-框架耦合传递至视轴，影响系统的指向精度。
+
+\subsection{外部大气扰动}
+机载光电跟踪系统搭载于飞行器上，不可避免地受到大气环境的影响。大气流场中的风和紊流是主要的干扰源，它们通过改变周围环境流场，进而影响载机和光电吊舱的气动力和气动力矩，进而影响载机的飞行状态，最终通过载机-框架耦合传递，影响光电吊舱的视轴指向精度。为了精确刻画与分析这种影响，需要建立能够反映不同时间尺度和统计特征的大气扰动模型。
+
+根据大气扰动的时间和空间特性，通常可以将其划分为四种基本类型：持续风、阵风、渐变风和随机风/紊流。
+
+\textbf{持续风} $\bm{V}_c$，或称为平均风，描述了稳定、长期不变或缓慢变化的背景风场，主要影响载机的稳态姿态和航迹。它为飞行分析提供了一个基准条件，其常向量模型直接反映了这种稳定、缓变的背景场特性：
+\begin{equation*}
+\mathbf{V}_{c} = \begin{bmatrix} U_0 & V_0 & W_0 \end{bmatrix}^T
+\end{equation*}
+其中，$U_0, V_0, W_0$ 是地固坐标系中的常值风速分量。通常垂直方向的平均风速很小，可假设 $W_0 \approx 0$。在仿真中，飞机的相对气流这个速度由机体速度减去该背景风速得到。
+
+\textbf{阵风} $\bm{V}_p(t)$，模拟了短时、局部、非平稳的突发性风扰，会引起载机的瞬态响应，考验控制系统的快速性和鲁棒性。它指的是风速在某一时刻突然产生，经过平滑增大达到峰值后，再经过一段时间衰减至零。选用的``1-cos''离散阵风模型刻画了其在有限时间内强度先增后减的瞬态冲击特性，其数学表达式为：
+\begin{equation}
+\bm{V}_p(t) = 
+\begin{cases}
+    \frac{V_{p, \text{max}}}{2}\left[1 - \cos\left( \frac{2\pi (t-t_s)}{T_p} \right)\right], & t_s \le t \le t_s+T_p \\
+    0, & \text{其他情况}
+\end{cases}
+\end{equation}
+其中 $V_{p, \text{max}}$ 是阵风的峰值速度，$t_s$ 是阵风开始的时间，$T_p$ 为阵风的持续时间。在上述时间范围之外，阵风速度为零。
+
+\textbf{渐变风} $\bm{V}_g(t)$，其风速随时间变化而增大或减小，具有渐变的特性，同样会引起载机的瞬态响应。其线性分段函数模型体现了风速随时间系统性变化的物理规律，表达式如下：
+\begin{equation}
+\bm{V}_g(t) = 
+\begin{cases}
+    V_{g,\text{max}} \frac{t-t_{g1}}{t_{g2}-t_{g1}}, & t_{g1} \le t \le t_{g2} \\
+    V_{g,\text{max}}, & t_{g2} < t \le t_{g2}+T_g \\
+    0, & \text{其他情况}
+\end{cases}
+\end{equation}
+其中 $V_{g,\text{max}}$ 是最大风速，$t_{g1}$ 是渐变开始时间，$t_{g2}$ 是达到最大风速的时间，$T_g$ 是最大风速的持续时间。在定义的时间段之外，渐变风速为零。
+
+\textbf{随机风/紊流} $\bm{V}_r(t)$ 描述了大气中非确定性的湍流扰动，是引起飞行器小尺度颠簸和姿态随机激励的主要来源，并提供持续的宽带激励，主要影响系统的运行平稳性和疲劳寿命。这类干扰通常通过其统计特性，即功率谱密度来描述。采用功率谱密度模型，其公式定义了能量在不同空间频率上的分布，并通过滤波器在时域上复现这种谱特性。其能量分布由谱模型参数 $\sigma_u, L_u$ 和空速 $V$ 决定。工程上最常用的是Dryden湍流模型，其纵向分量的功率谱密度函数为：
+\begin{equation*}
+\Phi_u(\Omega) = \frac{2 \sigma_u^2 L_u / V}{1 + (L_u \Omega / V)^2}
+\end{equation*}
+其中，$\sigma_u$ 和 $L_u$ 分别是湍流强度和湍流尺度长度，$\Omega$ 是空间频率。在时域仿真中，该模型通过设计相应的线性滤波器实现，将高斯白噪声作为输入，生成具有特定频谱特性的湍流速度序列作为输出。
+
+在综合分析中，总风速模型可将上述四种不同特性的风速模型，按照一定的权重比例加权求和得到混合风模型：
+\begin{equation}
+\label{eq:mixed_wind}
+\bm{V} = \alpha_1 \bm{V}_c + \alpha_2 \bm{V}_p + \alpha_3 \bm{V}_g + \alpha_4 \bm{V}_r
+\end{equation}
+其中，$\alpha_1, \alpha_2, \alpha_3, \alpha_4$ 分别为持续风、阵风、渐变风和随机风的加权比例，且满足 $\alpha_1 + \alpha_2 + \alpha_3 + \alpha_4 = 1$。
+
+\textbf{风扰力矩}风速变化通过气动力矩作用于载机，形成风场干扰力矩。该模型与相对风速的平方成正比，具有非线性特性，这源于气动力与动压相关的基本物理原理。其各轴分量可近似表示为：
+\begin{equation}
+\label{eq:wind_torque}
+\Gamma_{wi} = \frac{1}{2} C_i \rho S_i L_i V_{wi}^2, \quad i=x,y,z
+\end{equation}
+其中 $V_{wi}$ 是相对风速在机体坐标系 $i$ 轴的分量，$C_i, \rho, S_i, L_i$ 分别是该轴向的气动系数、空气密度、参考面积和参考长度。所有这些风扰最终都通过改变载机所受的气动力和力矩来影响其运动状态 $\bm{\omega}_B, \dot{\bm{\omega}}_B, \bm{a}_B$，并进而通过运动学和动力学耦合传递至光电吊舱，干扰视轴指向。
+
+\subsection{振动传递与未配平力矩}
+载机在飞行中进行加减速、横向移动等机动，以及外界高速气流的冲击，会产生振动。当载机机动或气流振动越剧烈，其加速度越大，由质量偏心产生的未配平力矩影响就越明显。
+
+载机机体的高频振动主要源于动力系统的旋转部件如螺旋桨的质量不平衡。为定量描述简谐激振力的产生机理，定义固连于载机机身的机体坐标系 $\mathcal{F}_b$ 与固连于螺旋桨转子的旋转坐标系 $\mathcal{F}_r$。假设转子存在等效不平衡质量 $m_0$，偏心距为 $e$，并以角速度 $\Omega$ 绕机体 $x_b$ 轴旋转。在旋转坐标系 $\mathcal{F}_r$ 中，定义 $y_r$ 轴始终指向不平衡质点，此时该不平衡质量产生的离心力矢量 $\bm{F}^r$ 为模值 $F_c = m_0 e \Omega^2$ 的恒定矢量，即：
+\begin{equation}
+\label{eq:force_rotating_frame}
+\bm{F}^r = \begin{bmatrix} 0 & F_c & 0 \end{bmatrix}^T
+\end{equation}
+随着转子运动，旋转坐标系相对于机体坐标系的滚转角为 $\theta(t) = \Omega t$。利用旋转矩阵 $\bm{R}_{br}(\Omega t)$ 将旋转系下的恒力矢量 $\bm{F}^r$ 投影至机体坐标系，得到作用于机体基座的激振力 $\bm{F}^b(t)$：
+\begin{equation}
+\label{eq:force_transformation}
+\bm{F}^b(t) = \bm{R}_{br}(\Omega t) \bm{F}^r =
+\begin{bmatrix}
+1 & 0 & 0 \\
+0 & \cos(\Omega t) & -\sin(\Omega t) \\
+0 & \sin(\Omega t) & \cos(\Omega t)
+\end{bmatrix}
+\begin{bmatrix}
+0 \\ F_c \\ 0
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 \\
+F_c \cos(\Omega t) \\
+F_c \sin(\Omega t)
+\end{bmatrix}
+\end{equation}
+上式表明，离心力在旋转坐标系下虽为恒定矢量，但通过坐标变换矩阵映射至机体坐标系后，其在侧向 $y_b$ 与垂向 $z_b$ 轴上的投影分量表现为频率为 $\Omega$ 的正弦或余弦函数。该推导说明正弦形式的干扰源于旋转矢量向固定参考系的几何投影。
+
+基于机体结构的线性弹性假设，基座处的振动加速度响应 $\bm{a}_b(t)$ 将保持相同的简谐形式。更进一步地，当系统存在多个旋转源（如多发动机、多级转子）或非线性因素（如轴承间隙、结构非线性）时，总的激振力可展开为基频及其高次谐波的叠加：
+\begin{equation}
+\label{eq:harmonic_expansion}
+\bm{F}^b(t) = \sum_{k=1}^{N} \begin{bmatrix}
+0 \\
+F_{yk} \cos(k\Omega t + \phi_{yk}) \\
+F_{zk} \sin(k\Omega t + \phi_{zk})
+\end{bmatrix}
+\end{equation}
+其中 $F_{yk}$、$F_{zk}$ 和 $\phi_{yk}$、$\phi_{zk}$ 分别为第 $k$ 次谐波的幅值和相位。这种多谐波表征不仅能够准确描述单一旋转源的基频激励，还能够捕捉系统非线性效应引入的高次谐波成分，为后续的频域分析和振动控制设计提供了数学基础。
+
+为了表征这一传递过程，我们将"载机—隔振系统—外框架—内框架"系统形式表征为一个多体动力学模型，并由此推导出未配平力矩、惯性力传递和扰动传播的数学表示。这套表征体系清晰地揭示了宏观的结构振动如何转化为微观的力矩扰动。
+
+\subsubsection{系统总体动力学框架}
+整个光电吊舱系统（含载机、隔振装置、外框架、内框架）可以抽象成如下多刚体层级：
+\[
+\text{载机（基座）} \rightarrow \text{隔振装置} \rightarrow \text{方位框架（外框）} \rightarrow \text{俯仰框架（内框）}
+\]
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/vib_trans.png}
+    \caption{载机-隔振-伺服框架}
+    \label{fig:vib_trans}
+\end{figure}
+每一层的运动状态均可用刚体动力学方程描述，从而建立起从振动源到力矩扰动的完整数学传递链条。
+
+\subsubsection{载机振动与基座加速度输入}
+载机在飞行时受到气动力、发动机及气流等激励，产生机体加速度 $\bm{a}_b$。假设吊舱基座与机体通过隔振器相连，则基座的运动方程可表征为经典的二阶系统：
+\begin{equation}
+    M_B \bm{\ddot{x}}_B + C_B \bm{\dot{x}}_B + K_B \bm{x}_B = - M_B \bm{a}_b(t)
+    \label{eq:vib_base}
+\end{equation}
+其中，$M_B, C_B, K_B$ 分别为隔振系统等效质量、阻尼、刚度矩阵；$\bm{x}_B$ 为基座相对机体的位移。由此，传递到吊舱基座的总加速度输入为 $\bm{a}_B = \bm{\ddot{x}}_B + \bm{a}_b$。这个基座加速度是后续各框架产生惯性力和未配平力矩的根源。
+
+\subsubsection{方位框架（外框）动力学方程}
+方位框架相对基座转动，其刚体转动方程为：
+\begin{equation}
+    \bm{I}_A \bm{\dot{\omega}}_A + \bm{\omega}_A \times (\bm{I}_A \bm{\omega}_A) = \bm{T}_{A,\text{act}} + \bm{T}_{uA} + \bm{T}_{\text{dist},A}
+    \label{eq:dyn_azimuth}
+\end{equation}
+其中 $\bm{I}_A$ 为外框的转动惯量；$\bm{\omega}_A$ 为外框角速度；$\bm{T}_{A,\text{act}}$ 为方位伺服电机输出力矩；$\bm{T}_{uA}$ 为未配平力矩；$\bm{T}_{\text{dist},A}$ 为其他外界扰动力矩。外框质心处的线加速度由基座加速度和转动效应叠加而成：
+\begin{equation}
+    \bm{a}_A = \bm{a}_B + \bm{\dot{\omega}}_A \times \bm{r}_A + \bm{\omega}_A \times (\bm{\omega}_A \times \bm{r}_A)
+    \label{eq:acc_azimuth}
+\end{equation}
+其中 $\bm{r}_A$ 是从外框转轴中心指向其质心的矢量。
+
+\subsubsection{俯仰框架（内框）动力学方程}
+类似地，俯仰框架相对方位框架转动，其动力学方程为：
+\begin{equation}
+    \bm{I}_E \bm{\dot{\omega}}_E + \bm{\omega}_E \times (\bm{I}_E \bm{\omega}_E) = \bm{T}_{E,\text{act}} + \bm{T}_{uE} + \bm{T}_{\text{dist},E}
+    \label{eq:dyn_elevation}
+\end{equation}
+内框质心处的加速度为：
+\begin{equation}
+    \bm{a}_E = \bm{a}_A + \bm{\dot{\omega}}_E \times \bm{r}_E + \bm{\omega}_E \times (\bm{\omega}_E \times \bm{r}_E)
+    \label{eq:acc_elevation}
+\end{equation}
+其中 $\bm{r}_E$ 是从内框转轴中心指向其质心的矢量。
+
+\subsubsection{未配平力矩表征}
+未配平力矩的本质是刚体偏心质量在加速度场中产生的惯性力矩。根据牛顿-欧拉方程，作用于各框架的未配平力矩可精确表征为质心偏置矢量与惯性力的叉乘。
+
+对于俯仰框架，其受到的未配平力矩为：
+\begin{equation}
+    \label{eq:unbalanced_torque_e}
+    \bm{T}_{uE} = \bm{r}_E \times (m_E \bm{g}_E - m_E \bm{a}_E)
+\end{equation}
+其中 $\bm{a}_E$ 是俯仰框架质心处的加速度，$\bm{g}_E$ 是作用在内框架的重力加速度在俯仰坐标系下的表示。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{pic_new/image119.png}
+    \caption{内框架质心到旋转轴的距离示意图}
+    \label{fig:mass_imbalance}
+\end{figure}
+
+对于方位框架，其受到的未配平力矩类似：
+\begin{equation}
+    \label{eq:unbalanced_torque_a}
+    \bm{T}_{uA} = \bm{r}_A \times (m_A \bm{g}_A - m_A \bm{a}_A)
+\end{equation}
+其中 $\bm{g}_A$ 是重力加速度在外框架坐标系下的表示。这两个方程清晰地揭示了载机振动（通过 $\bm{a}_B$ 传递至 $\bm{a}_A, \bm{a}_E$）是如何通过质量偏心（$\bm{r}_A, \bm{r}_E$）转化为对伺服系统的力矩干扰的。
+
+\subsection{多谐波等效模型}
+尽管上述物理模型从原理上精确描述了未配平力矩的来源，但在控制系统设计中，直接测量或估计各级加速度通常非常困难。然而，考虑到载机结构振动的主要来源往往具有显著的周期性特征，其在基座上产生的加速度也因此富含谐波成分。这些谐波通过动力学链条传递，最终使得未配平力矩表现为一种多谐波干扰的形式。
+
+为了便于设计干扰观测器或自适应控制器，工程上常将这种复杂的振动力矩等效为一个多谐波叠加模型。对于方位轴和俯仰轴 $i \in \{A, E\}$，其振动干扰力矩 $T_{u,i}$ 可被简化并表征为：
+\begin{equation} \label{eq:harmonic_disturbance}
+T_{u,i} = \gamma_{i,0} + \sum_{j=1}^{N_i} \gamma_{i,j} \sin(\Omega_{i,j} t + \varphi_{i,j})
+\end{equation}
+式中，$N_i$ 是第 $i$ 轴上主要谐波模式的数量；$\gamma_{i,0}$ 为力矩的直流偏置分量；$\gamma_{i,j}$、$\Omega_{i,j}$ 和 $\varphi_{i,j}$ 分别是第 $j$ 个谐波分量的未知幅值、角频率和相移。尽管谐波频率 $\Omega_{i,j}$ 可以在地面辨识得到，但在实际飞行中它们可能发生漂移，这为设计自适应估计算法提供了动机。该模型将复杂的物理振动简化为了一个参数化的数学形式，是进行高精度扰动抑制控制的有效途径。
+
+\par
+\noindent
+\textbf{载机层干扰耦合通道分析}
+\par
+\noindent
+载机层的两类主要干扰，未配平力矩 \eqref{eq:unbalanced_torque_e} 与多谐波振动 \eqref{eq:harmonic_disturbance}，在动力学上均表现为外部施加的干扰力矩。在伺服框架动力学方程 \eqref{eq:1.12} 和 \eqref{eq:1.14} 中，它们通过合力矩 $\bm{M}$ 项进入系统。因此，这两类干扰均属于加性力矩干扰，其耦合通道与电机的主动控制力矩 $\bm{T}_{m}$ 相同。
+
+
+\section{伺服框架层干扰}
+伺服框架层是连接载机平台与精密跟踪机构的中间环节，其自身的非理想特性是主要的内部干扰源。本节主要表征由伺服电机引入的力矩波动干扰，以及由机械结构引入的转轴非线性摩擦干扰。
+
+\subsection{伺服电机力矩波动}
+光电跟踪系统伺服框架层的视轴指向由各轴的伺服电机驱动。由于电机输出不能完全跟踪期望力矩，引入了伺服力矩波动影响。在不考虑摩擦影响下，伺服框架单个轴向的伺服电机模型可表示为：
+\begin{equation}
+    \label{eq:motor_model}
+    L \frac{di(t)}{dt} + Ri(t) = u(t) - K_e \dot{\theta}(t)
+\end{equation}
+其中 $L$ 是电机电感，$u(t)$ 是系统输入，$i(t)$ 是电机电流，$K_e$ 为反电动势系数，电机输出力矩 $T_m(t) = K_t i(t)$, $K_t$ 是电机的力矩系数。
+
+伺服电机的数学模型 \eqref{eq:motor_model} 直接来源于电机学的基本定律。其电气部分基于基尔霍夫电压定律，描述了输入电压、电路元件和反电动势间的动态关系，其中电感 $L$ 的存在是导致电流响应滞后于电压指令、产生高频力矩波动和相位滞后的根本原因。其机电转换部分则基于洛伦兹力定律，描述了电机电流如何转化为输出力矩。因此，伺服力矩波动，即期望力矩与实际输出力矩的差异，其动态特性完全由该电气和机电转换模型决定。
+
+\subsection{转轴非线性摩擦}
+由于转轴并非完全光滑，存在摩擦。当载机机动或电机驱动转轴运动时，会产生相对转动，从而产生摩擦力矩。这种干扰在目标精细跟踪等频繁换向场景下尤其明显。本文采用 LuGre 动态摩擦模型来描述摩擦力矩：
+\begin{equation}
+\begin{cases}
+    T_f = \sigma_0 z + \sigma_1 \dot{z} + \sigma_2 \omega \\
+    \dot{z} = \omega - \frac{|\omega|}{g(\omega)}z \\
+    g(\omega) = \frac{1}{\sigma_0} [T_c + (T_s - T_c)e^{-(\omega/\omega_s)^2}]
+\end{cases}
+\label{eq:lugre_model}
+\end{equation}
+此式 \eqref{eq:lugre_model} 中，$T_f$ 为总摩擦力矩。该模型引入一个不可测量的内部状态 $z$，用以描述转轴摩擦接触表面鬃毛的平均弹性变形。$\omega$ 是伺服框架的相对转动角速度。$\sigma_0$, $\sigma_1$, $\sigma_2$ 分别是鬃毛刚度系数、动态阻尼系数和粘性摩擦系数。函数 $g(\omega)$ 是 Stribeck 函数，其形式由静摩擦力矩 $T_s$、库伦摩擦力矩 $T_c$ 和 Stribeck 特征角速度 $\omega_s$ 共同决定。
+
+采用LuGre模型的原因在于它能精确捕捉转轴摩擦在精密指向任务中至关重要的复杂动态特性。模型通过内部状态 $z$ 体现了摩擦力的"记忆效应"和预滑移特性，其 Stribeck 效应函数 $g(\omega)$ 描述了摩擦力从静摩擦到动摩擦的非线性过渡过程。最终的总摩擦力矩由弹性力、阻尼力和粘性摩擦力三部分组成，成功地在数学上再现了摩擦的滞后、粘滑等关键物理特性。
+
+
+
+\subsubsection*{伺服框架层干扰耦合通道分析}
+
+伺服框架层主要存在两类干扰，其耦合通道均为加性力矩。其一是电机内部产生的力矩波动，其二是转轴处的非线性摩擦。尽管物理来源不同，但它们在动力学上均表现为对主动控制力矩的直接叠加或拮抗，属于加性干扰。在动力学方程中，这些干扰项与主动控制力矩 $\bm{T}_{m}$ 处于同一通道，共同作用于框架的转动惯量。
+
+\section{精密跟踪层干扰}
+快反镜是系统的精密跟踪环节，其执行器通常为音圈电机或压电陶瓷。这两类执行器的干扰特性截然不同，需要分别建模。
+
+\subsection{音圈电机（VCM）干扰特性}
+音圈电机（VCM）以其高带宽、高线性度、低迟滞（尤其是无铁芯VCM）而著称。因此，其干扰主要不表现为迟滞，而是以下两类：
+
+\textbf{电气动态与相角滞后：}
+VCM的电气特性（电感L、电阻R、反电动势Ke）在第2.3节式\eqref{eq:motor_model}中已建模。在高频工作时，电感 $L$ 会导致电流 $i(t)$ 相对于驱动电压 $u(t)$ 产生显著的相角滞后，使得实际力矩 $T_m$ 无法瞬时跟踪指令。这在高频扰动抑制任务中，表现为一种动态跟踪误差或干扰。
+
+\textbf{电机力矩波动：}
+电机力矩波动源于磁场分布不均、线圈绕组不精密或驱动电流的纹波。这种波动可建模为叠加在主输出力矩上的一个高频干扰项 $\bm{T}_{ripple}$：
+\begin{equation}
+    \bm{T}_{m} = K_t i(t) + \bm{T}_{ripple}(t)
+\end{equation}
+其中 $\bm{T}_{ripple}$ 通常是与转角 $\theta$ 或电流 $i$ 相关的高频函数。
+
+VCM的干扰主要源于其电气动态和物理结构的不完美性。其电气动态的数学模型同伺服电机模型 \eqref{eq:motor_model}，其中的电感 $L$ 是引起高频驱动下实际力矩相位落后于驱动电压的物理根源。力矩波动则是由磁场不均匀、线圈绕制误差等物理因素引起的，是对理想线性力-电流关系的偏离。
+
+\subsection{压电陶瓷（PZT）迟滞干扰}
+精密跟踪层干扰耦合通道分析与VCM不同，压电陶瓷（PZT）执行器虽然具有极快响应速度和高分辨率，但其材料本身存在明显的非单调复杂迟滞特性现象，即输入电压和输出位移之间存在非线性关系。这种非线性关系导致定位误差，严重影响了精密定位精度。
+
+我们用改进的Bouc-Wen模型来表示压电陶瓷的迟滞动态。传统Bouc-Wen模型基于非线性微分方程，适用于描述一般的迟滞特性，但在处理三角波等非光滑输入信号时存在不足。基于不完全微分的柔化思想改进后的模型能够有效描述PZT的非光滑迟滞特性，并且具有良好的可实现性和简洁的算法，特别适合高速实时控制的要求。其动态方程如下：
+\begin{equation}
+\begin{cases}
+    y(t) = d u(t) + h(t) \\
+    \dot{h}(t) = \alpha \dot{u}(t) - \beta |\dot{u}(t)| |h(t)|^{n-1} h(t) - \gamma \dot{u}(t) |h(t)|^n
+\end{cases}
+\label{eq:bouc_wen_model}
+\end{equation}
+其中 $y(t)$ 是系统输出，$d$ 是初始迟滞增益，$u(t)$ 是输入电压，$h(t)$ 表示迟滞模型中系统的内部状态。$\alpha, \beta, \gamma, n$ 为迟滞特性系数，决定了迟滞环的大小和形状。
+
+采用改进的Bouc-Wen模型 \eqref{eq:bouc_wen_model} 是因为它能有效刻画压电材料固有的迟滞非线性物理特性。迟滞的本质是一种多值映射和记忆效应，即输出不仅取决于当前输入，还取决于输入历史。该模型通过引入一个不可测量的内部状态变量 $h(t)$ 及其非线性微分方程来模拟这种"记忆"状态。方程的结构和参数直接决定了迟滞环的形状、宽度和饱和度，从而在数学上准确复现实际的迟滞回线。
+
+\subsubsection*{精密跟踪层干扰耦合通道分析}
+
+精密跟踪层的干扰耦合通道呈现出两种不同形式。对于音圈电机，其力矩波动与伺服框架干扰类似，属于加性力矩干扰，通过合外力矩项进入系统。而压电陶瓷（PZT）执行器的迟滞干扰耦合通道与前述的力矩干扰截然不同。它并非一个附加的干扰力矩，而是体现在执行器自身的输入输出关系上。标称模型 \eqref{eq:1.19} 假设输入电压 $u(t)$ 与输出力矩（最终表现为转角 $\theta(t)$）之间为线性关系。而Bouc-Wen模型 \eqref{eq:bouc_wen_model} 则表明，实际的执行器响应 $y(t)$ 是 $u(t)$ 的一个非线性函数。因此，该干扰是通过输入通道的非线性映射进入系统的，它改变了控制输入的有效性。
+
+\section{系统模型不确定性}
+\label{sec:param_perturbation}
+
+受测试标定精度、飞行振动、结构柔性变形、燃料消耗以及天地环境不一致等因素影响，机载光电跟踪系统各层级的实际模型参数与其标称设计值之间存在偏差。这种模型不确定性可统一表征为参数摄动。
+
+具体而言，各层级动力学模型中的关键参数均受到摄动影响。针对\ref{chap:1}中建立的各级模型，其不确定性可集中表征如下：
+
+\begin{equation}
+\left\{
+\begin{aligned}
+\dot{\bm{\omega}}_B &= \bm{f}(\bm{\omega}_B, \bm{\Gamma}_{\!nom} \!+\! \Delta\bm{\Gamma}) + \bm{B}(\bm{\Gamma}_{\!nom} \!+\! \Delta\bm{\Gamma}) \bm{M} \\
+\bm{M}_A &= (\bm{I}_A + \Delta \bm{I}_A) \dot{\bm{\omega}}_A + \bm{\omega}_A \times ((\bm{I}_A + \Delta \bm{I}_A) \bm{\omega}_A) \\
+\bm{M}_E &= (\bm{I}_E + \Delta \bm{I}_E) \dot{\bm{\omega}}_E + \bm{\omega}_E \times ((\bm{I}_E + \Delta \bm{I}_E) \bm{\omega}_E) \\
+u_{Fx}(t) &= \sum_{k=0}^{3} (A_k+\Delta A_k) \gamma_x^{(k)}(t) \\
+u_{Fy}(t) &= \sum_{k=0}^{3} (A_k+\Delta A_k) \gamma_y^{(k)}(t)
+\end{aligned}
+\right.
+\label{eq:param_pert_all}
+\end{equation}
+其中，$\bm{\omega}_B = [p, q, r]^T$ 为载机角速度，$\bm{M} = [M_x, M_y, M_z]^T$ 为合外力矩；$\bm{f}(\cdot)$ 代表载机动力学中的陀螺耦合项，$\bm{B}(\cdot)$ 代表力矩输入矩阵；$\bm{\Gamma}_{nom}$ 为标称惯量参数向量，$\Delta\bm{\Gamma}$ 为惯量摄动引起的系数变化；$\bm{I}_A, \bm{I}_E$ 分别为方位轴和俯仰轴的标称转动惯量，$\Delta \bm{I}_A, \Delta \bm{I}_E$ 为其摄动；$\bm{\omega}_A, \bm{\omega}_E$ 分别为方位轴和俯仰轴的角速度向量；$A_k$ 为快反镜控制系统传递函数系数，$\Delta A_k$ 为其摄动；$\gamma_x(t), \gamma_y(t)$ 为快反镜X轴和Y轴的控制输入。
+
+上述方程表明，模型不确定性本质上是一种乘性干扰，通过改变系统参数来影响动态响应。对于载机层，惯量不确定性改变了非线性耦合系数；对于框架层，转动惯量摄动直接影响角加速度；对于快反镜层，传递函数系数的变化改变了控制响应特性。
+
+\section{多源干扰的耦合传递机理}
+\label{sec:disturbance_coupling}
+
+前述各节分别表征了系统各层级的干扰源。为刻画它们在视轴上的综合作用，以下以俯仰轴为例，给出一组紧凑的标量方程，并据此将耦合关系归纳为四条路径。记 $I_E$ 为俯仰轴标称转动惯量，$\Delta I_E$ 为惯量不确定性，$\xi,\dot\xi,\ddot\xi$ 分别为俯仰角、角速度与角加速度，$T_{cmd}$ 为施加于该轴的等效指令力矩。
+
+\begin{equation}
+\label{eq:pitch_scalar_dynamics_revised}
+\left\{
+\begin{array}{l}
+    I_E\,\ddot{\xi} = T_{cmd}
+    \;-\; f_{C,E}(\bm{\omega}_B,\dot{\eta},\dot{\xi})
+    \;-\; f_{add,E}(t,\xi)
+    \;-\; f_{xE}(\dot{\xi},z,u_E,h)
+    \;-\; f_{M,E}(\ddot{\xi}) \\[2pt]
+    f_{C,E}(\bm{\omega}_B,\dot{\eta},\dot{\xi}) = \big[\bm{\omega}_E \times \big((\bm{I}_E+\Delta\bm{I}_E)\,\bm{\omega}_E\big)\big]_y \\[2pt]
+    f_{add,E}(t,\xi) = \delta_{0}
+    + \sum_{k=1}^{N_t} \delta_{k}\,\sin(\Omega_{k} t + \phi_{k})
+    + \sum_{m=1}^{N_\theta} \bar{\delta}_{m}\,\sin(m\,\xi + \bar{\phi}_{m}) \\[2pt]
+    f_{xE}(\dot{\xi},z,u_E,h) = \sigma_0 z + \sigma_1 \dot{z} + (\sigma_2+\kappa_e)\,\dot{\xi} \;+\; f_h(u_E,h) \\[2pt]
+    f_{M,E}(\ddot{\xi}) = \Delta I_E\,\ddot{\xi}
+\end{array}
+\right.
+\end{equation}
+
+电气回路满足
+\begin{equation}
+\label{eq:servo_electrics_pitch}
+L_E \dot i_E + R_E i_E = u_E - K_{eE}\,\dot{\xi},
+\end{equation}
+其中 $L_E,R_E,K_{eE}$ 分别为电感、电阻与反电动势系数，$i_E$ 为电流，$u_E$ 为电压。采用 VCM 时 $T_{cmd}=K_{tE} i_E$，$K_{tE}$ 为力矩常数。电气–机械反向耦合在低频可近似为 $\kappa_e \approx K_{tE}K_{eE}/R_E$，其严格关系由 \eqref{eq:servo_electrics_pitch} 与 $T_{cmd}=K_{tE} i_E$ 联立得到。若精密跟踪层采用 PZT，迟滞映射写作
+\begin{equation}
+\label{eq:pzt_effective_input_pitch}
+u_e = d\,u_E + h,\qquad
+\dot h = \alpha\,\dot u_E - \beta\,|\dot u_E|\,|h|^{n-1}h - \gamma\,\dot u_E\,|h|^{n},
+\end{equation}
+并与快反镜线性三阶模型 \eqref{eq:1.19} 组合为
+\begin{equation}
+\label{eq:pzt_closed_pitch}
+u_e = A_3 \dddot{\gamma} + A_2 \ddot{\gamma} + A_1 \dot{\gamma} + A_0 \gamma,
+\end{equation}
+其中 $A_3,A_2,A_1,A_0$ 为已知系数，$\gamma$ 为快反镜角度。
+
+第一条干扰路径为直接传递，由 $f_{C,E}(\bm{\omega}_B,\dot{\eta},\dot{\xi})$ 表征。该项来源于牛顿–欧拉方程中的陀螺力矩，$\bm{\omega}_E$ 为俯仰框架在惯性空间的角速度，其由基座角速度与方位轴角速度通过 \eqref{eq:1.5}–\eqref{eq:1.9} 的坐标变换叠加而成。取 $y$ 轴分量得到作用到俯仰轴的等效耦合力矩。该路径反映上层机构角运动对俯仰轴的直接影响，可用于几何前馈与跨轴耦合补偿的设计依据。
+
+第二条路径为加性力矩，由 $f_{add,E}(t,\xi)$ 表征。该项用直流偏置与两类谐波叠加描述窄带扰动，一类随时间变化，频率 $\Omega_k$ 刻画供电与电气纹波，一类随角位置变化，$m\,\xi$ 刻画齿槽与位置相关波动。未配平力矩的频域效应也并入该项。需要从物理机理求值时，可回溯 $\big[\bm{r}_E \times (m_E \bm{g}_E - m_E \bm{a}_E)\big]_y$，其中 $\bm{r}_E$ 为质心偏置，$m_E$ 为等效质量，$\bm{a}_E$ 由 \eqref{eq:acc_elevation} 计算。工程上常以下式
+\begin{equation}
+\label{eq:unbalance_harmonics_pitch}
+f_{add,E}(t)\approx \gamma_{0} + \sum_{j=1}^{N_u} \gamma_{j}\,\sin(\Omega_{u,j} t + \varphi_{u,j})
+\end{equation}
+进行在线辨识，并根据辨识到的主要谐波成分进行干扰抑制和补偿。
+
+第三条路径为交联激发，由 $f_{xE}(\dot{\xi},z,u_E,h)$ 描述。其第一部分来自 LuGre 摩擦，$\sigma_0 z+\sigma_1 \dot z+\sigma_2 \dot\xi$ 对小速往复时的非线性失真起主导作用，模型结构见 \eqref{eq:lugre_model}。第二部分为电气–机械反向耦合，反电动势通过 \eqref{eq:servo_electrics_pitch} 使机械速度改变有效驱动，可在低频近似为与 $\dot\xi$ 成比例的等效项 $\kappa_e \dot\xi$。第三部分为 PZT 迟滞的等效输入 $f_h(u_E,h)$，由 \eqref{eq:pzt_effective_input_pitch}–\eqref{eq:pzt_closed_pitch} 确定，说明输入通道的非线性会随输入与内部状态共同激发，直接改变控制信号的有效性。
+
+第四条路径为乘性摄动，由 $f_{M,E}(\ddot{\xi})=\Delta I_E\ddot{\xi}$ 给出。该项把惯量不确定性对角加速度的乘性影响显式化，来源见式\eqref{eq:param_pert_all}中俯仰框架的惯量摄动项。它直接改变系统的等效惯性与响应速度，是鲁棒性分析与增益规划时需要重点考虑的因素。
+
+综上所述，上述结构把直接传递、加性力矩、交联激发与乘性摄动四条路径在同一方程内并列呈现，与第二章的通道划分保持一致。该表述便于进行频域分析与参数辨识，也便于在控制器设计中针对每一路径配置相应的前馈与补偿策略。

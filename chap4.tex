@@ -1,0 +1,100 @@
+\chapter{主要干扰分析与分工况耦合建模}\label{chap:4}
+
+\section{模型构建思路与工况划分}\label{sec:model_idea}
+
+第一章所建立的线性一体化模型 \eqref{eq:sys_state}，是系统控制器设计的标称模型。该模型结构清晰且易于分析，但忽略了各类非线性干扰。如第三章 \ref{chap:3} 的量化分析结果所示，系统指向误差在不同工况下由截然不同的干扰源主导。
+
+因此，为支持高精度控制器的设计，本章采用"标称模型 + 主导干扰"的建模策略。此策略依据第三章的分析结论，针对特定工况，在标称模型基础上选择性地耦合该工况下的主导干扰项，构建面向特定任务的分析模型。该方法既能保证模型在特定工况下的分析精度，又保留了标称模型的简洁性，有助于降低后续控制律的设计复杂度。
+
+本章基于第一章的十五维状态空间模型进行扩展。所有工况模型均采用统一的表征形式：
+\begin{equation}
+\label{eq:dcm_state_space}
+\dot{\bm x} = \bm A \bm x + \bm B \bm u + \bm E_d \bm d(\bm x, t)
+\end{equation}
+其中状态向量 $\bm x \in \mathbb{R}^{15}$ 由式 \eqref{eq:sys_vectors_revised} 定义，包含方位轴、俯仰轴、快反镜X轴、快反镜Y轴的角度、角速度、电流，以及载机姿态角。标称系统矩阵 $\bm A$ 和输入矩阵 $\bm B$ 由式 \eqref{eq:sys_state_A_B_sub} 定义，为线性时不变矩阵。干扰向量 $\bm d(\bm x, t)$ 表示该工况下的主导干扰，干扰输入矩阵 $\bm E_d$ 将干扰施加到状态方程的相应位置。
+
+\section{工况一：高空静止目标跟踪模型}
+
+根据第三章图 \ref{fig:20} 的分析，在目标静止、5000米以上高空工况下，转轴摩擦是主导干扰。伺服框架长时间工作在零速附近，Stribeck效应和粘滑现象等强非线性特性充分激发。
+
+该工况下的主导干扰向量为：
+\begin{equation}
+\bm d(\bm x) = 
+\begin{bmatrix}
+    T_{fA}(\omega_A, z_A) \\
+    T_{fE}(\omega_E, z_E)
+\end{bmatrix}
+\end{equation}
+其中 $T_{fA}$ 和 $T_{fE}$ 分别为方位轴和俯仰轴的LuGre摩擦力矩，由式 \eqref{eq:lugre_model} 计算。$\omega_A$ 为方位轴角速度，即状态向量中的第2个分量 $x_2$。$\omega_E$ 为俯仰轴角速度，即状态向量中的第5个分量 $x_5$。$z_A$ 和 $z_E$ 为摩擦模型的内部状态，描述轴向摩擦表面的动态特性。
+
+干扰输入矩阵 $\bm E_d$ 为 $15 \times 2$ 矩阵，将摩擦力矩施加到方位轴和俯仰轴的角加速度状态上。根据式 \eqref{eq:simp_gimbal_A} 和 \eqref{eq:simp_gimbal_E}，摩擦力矩作为负力矩进入动力学方程，因此定义为：
+\begin{equation}
+\label{eq:Ed_friction}
+\bm E_d = 
+\begin{bmatrix}
+    0 & 0 \\
+    -1/J_A & 0 \\
+    0 & 0 \\
+    0 & 0 \\
+    0 & -1/J_E \\
+    \vdots & \vdots \\
+    0 & 0
+\end{bmatrix}_{15 \times 2}
+\end{equation}
+其中 $J_A$ 为方位轴转动惯量，$J_E$ 为俯仰轴转动惯量。矩阵中仅第2行和第5行非零，表明摩擦力矩仅作用于两个伺服轴的角加速度状态。
+
+\section{工况二：低空机动目标跟踪模型}
+
+第三章的量化分析表明，在目标移动、3000米以下低空工况下，伺服框架和快反镜需要进行高动态往复运动，此时快反镜的PZT迟滞效应成为最主要的干扰源之一。
+
+在此工况下，精密跟踪层采用PZT驱动。因此，第\ref{sec:model_idea}节中基于VCM的15维一体化标称模型(式\eqref{eq:dcm_state_space})已不再适用。我们必须构建一个新的标称模型，该模型基于PZT的动态特性。
+
+我们构建一个新的13维状态空间模型。该模型的状态向量 $\bm x \in \mathbb{R}^{13}$，其框架层动态（状态 $x_1$ 至 $x_6$）与载机层动态（状态 $x_{11}$ 至 $x_{13}$）与式\eqref{eq:sys_vectors_revised}保持一致，但快反镜层由VCM的三阶动态（角度、角速度、电流）替换为PZT的二阶动态（角度、角速度）。
+
+新的状态向量定义为：
+\begin{equation}
+\label{eq:state_vec_pzt}
+\bm x = \big[ \eta, \omega_A, i_A, \xi, \omega_E, i_E, \gamma_x, \omega_{Fx}, \gamma_y, \omega_{Fy}, \phi_B, \theta_B, \psi_B \big]^T
+\end{equation}
+
+该PZT标称模型基于第1.3.3节的二阶动力学(式\eqref{eq:fsm_pzt_dynamics})，并忽略干扰项 $h$ 和 $p_F$。其快反镜子矩阵 $\bm A_{Fx}$ 和 $\bm A_{Fy}$ 均为二阶形式。
+
+在此PZT标称模型的基础上，迟滞干扰并非一个加性干扰力，而是如第\ref{chap:2}章(式\eqref{eq:bouc_wen_model})所定义的输入非线性映射。因此，工况二的耦合模型应表征为：
+\begin{equation}
+\label{eq:pzt_coupled_model}
+\dot{\bm x} = \bm A_{pzt}\bm x + \bm B_{pzt}\bm u_{eff}(\bm u, \bm h)
+\end{equation}
+其中 $\bm A_{pzt}$ 和 $\bm B_{pzt}$ 是13维PZT标称模型的系统与输入矩阵。 $\bm u_{eff}$ 是由Bouc-Wen模型(式\eqref{eq:bouc_wen_model})定义的包含了迟滞状态 $\bm h$ 的有效电压输入，它通过输入通道的非线性映射进入系统。
+
+\section{工况三：高空机动目标跟踪模型}
+
+对于目标移动、3000米以上高空工况，第三章图 \ref{fig:20} 显示载机平移旋转引起的未配平力矩成为主导干扰。此工况下目标相对角速度降低，伺服框架与快反镜的动态要求下降，摩擦和迟滞效应减弱。然而载机机动产生的惯性力通过质量偏心产生显著的干扰力矩。
+
+该工况下的主导干扰向量为：
+\begin{equation}
+\bm d(\bm x, t) = 
+\begin{bmatrix}
+    T_{uA,z}(\bm{a}_B, \bm{r}_A) \\
+    T_{uE,y}(\bm{a}_B, \bm{r}_E)
+\end{bmatrix}
+\end{equation}
+其中 $T_{uA,z}$ 和 $T_{uE,y}$ 分别为作用于方位轴Z轴和俯仰轴Y轴的未配平力矩分量，由式 \eqref{eq:unbalanced_torque_a} 和 \eqref{eq:unbalanced_torque_e} 计算。$\bm{a}_B$ 为载机基座在惯性系下的加速度向量，为时变输入。$\bm{r}_A$ 和 $\bm{r}_E$ 分别为方位框架和俯仰框架质心到各自转轴中心的矢量，表示质量偏心。这些力矩是载机加速度、质量偏心以及系统状态的函数。
+
+干扰输入矩阵 $\bm E_d$ 为 $15 \times 2$ 矩阵，将未配平力矩施加到方位轴和俯仰轴的角加速度状态上。其结构与工况一式 \eqref{eq:Ed_friction} 相同，定义为：
+\begin{equation}
+\label{eq:Ed_unbalanced}
+\bm E_d = 
+\begin{bmatrix}
+    0 & 0 \\
+    1/J_A & 0 \\
+    0 & 0 \\
+    0 & 0 \\
+    0 & 1/J_E \\
+    \vdots & \vdots \\
+    0 & 0
+\end{bmatrix}_{15 \times 2}
+\end{equation}
+其中 $J_A$ 和 $J_E$ 分别为方位轴和俯仰轴的转动惯量。未配平力矩作为外部力矩源施加，因此矩阵元素为正值。该模型准确反映了此工况下动基座效应的主导地位。
+
+%\input{chapter/chapter5.tex}
+% ... existing code ...

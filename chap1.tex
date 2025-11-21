@@ -1,0 +1,502 @@
+\chapter{光电跟踪系统多级联合建模与分析}\label{chap:1}
+机载光电跟踪系统广泛应用于激光通信，目标跟踪，导航定位等领域，为完成对目标的捕获与跟踪功能，如图~\ref{fig:1}所示，机载光电跟踪系统通常采用包含机架伺服框架和精密跟踪系统协同工作的复合轴结构。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{pic_new/image1.png}
+    \caption{光电跟踪系统三级结构}
+    \label{fig:1}
+\end{figure}
+
+本文将从系统多级深耦合建模和干扰闭环量化分析两个角度依次对机载光电吊舱系统进行详细介绍。
+下面分别就机动载机、稳定框架以及快反镜环节进行建模与分析，为后续控制算法的设计和优化提供理论支持。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pic_new/system.png} 
+    \caption{机载光电跟踪系统多级回路框图} % 图片标题
+    \label{fig:system_architecture} % 用于交叉引用
+  \end{figure}
+
+本文所研究的复合轴系统，其总体框架如图~\ref{fig:system_architecture}所示。
+该架构展示了系统的三级控制回路，即底层的飞行载机平台、中层的框架回路以及顶层的精跟踪回路。该框图也图示了各级子系统所受到的干扰源，这些干扰也是后续第\ref{chap:2}章中重点表征的对象。后续章节将依次建立各级子系统的数学模型，并分析图中所述的干扰耦合传递路径。
+
+
+
+\section{机动载机层建模与分析}
+\label{sec:1.1}
+光电吊舱搭载在运动载机上，载机的姿态运动角速度对吊舱视轴稳定控制的影响不可忽视。上层载机的运动情况由实际的任务需求所决定，并不在光电吊舱精准指向的控制闭环中，但引入上层载机的动力学模型，能够帮助建立和引入更切合工程实际的载机运动角速度信息。除此之外，考虑运动载机的动力学，结合光电吊舱框架动力学建立"载机-框架"深耦合模型，能够帮助我们充分认识到运动载机到伺服框架的非线性关联和干扰传递，揭示载机层级和框架层级之间的耦合作用关系和干扰传递，为后续多源干扰闭环量化分析以及机载光电吊舱视轴精细控制奠定良好基础。
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.6\textwidth]{pic_new/image3.png}
+    \caption{载机坐标系定义}
+    \label{fig:2}
+\end{figure}
+
+
+首先建立载机坐标系，如图~\ref{fig:2}所示载机坐标系原点一般建立在其质量中心，或者气动中心上，分别将 和 轴建立在载机前进方向和重力方向上， 轴按照右手坐标系定义。除了平动外，还考虑载机的姿态旋转变化，分别绕 轴旋转可以得到载机的滚转轴、俯仰轴和偏航轴。下面列出了载机在3维空间中运动的位置和姿态的一阶、二阶导数，用来表示载机的动态方程。
+
+公式(1.1)刻画了载机平台的速度、加速度、角速度、角加速度共计12维状态的载机动态方程。其中，$(p_h, p_e, p_d)$为载机在惯性系下的位置，$(u, v, w)$为载机在机体系下的速度，$(\phi, \theta, \psi)$为载机的欧拉角（滚转角、俯仰角、偏航角），$(p, q, r)$为载机在附体系下的角速度，$(f_x, f_y, f_z)$为载机受到的合外力，$(M_x, M_y, M_z)$为载机受到的合外力矩，$m$为载机质量。
+
+
+\begin{subequations}
+\label{eq:1.1}
+\begin{empheq}[left=\empheqlbrace]{align}
+&\begin{pmatrix} \dot{p}_h \\ \dot{p}_e \\ \dot{p}_d \end{pmatrix} = 
+\begin{pmatrix} 
+c_\theta c_\psi & s_\phi s_\theta c_\psi - c_\phi s_\psi & c_\phi s_\theta c_\psi + s_\phi s_\psi \\ 
+c_\theta s_\psi & s_\phi s_\theta s_\psi + c_\phi c_\psi & c_\phi s_\theta s_\psi - s_\phi c_\psi \\ 
+-s_\theta & s_\phi c_\theta & c_\phi c_\theta 
+\end{pmatrix} 
+\begin{pmatrix} u \\ v \\ w \end{pmatrix} \\[15pt]
+%
+&\begin{pmatrix} \dot{u} \\ \dot{v} \\ \dot{w} \end{pmatrix} = 
+\begin{pmatrix} rv - qw \\ pw - ru \\ qu - pv \end{pmatrix} + \frac{1}{m} 
+\begin{pmatrix} f_x \\ f_y \\ f_z \end{pmatrix} \\[15pt]
+%
+&\begin{pmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{pmatrix} = 
+\begin{pmatrix} 
+1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 
+0 & \cos\phi & -\sin\phi \\ 
+0 & \dfrac{\sin\phi}{\cos\theta} & \dfrac{\cos\phi}{\cos\theta} 
+\end{pmatrix} 
+\begin{pmatrix} p \\ q \\ r \end{pmatrix} \\[15pt]
+%
+&\begin{pmatrix} \dot{p} \\ \dot{q} \\ \dot{r} \end{pmatrix} = 
+\begin{pmatrix} 
+\Gamma_1 pq - \Gamma_2 qr \\ 
+\Gamma_5 pr - \Gamma_6 (p^2 - r^2) \\ 
+\Gamma_7 pq - \Gamma_1 qr 
+\end{pmatrix} + 
+\begin{pmatrix} 
+\Gamma_3 & 0 & \Gamma_4 \\ 
+0 & \dfrac{1}{J_y} & 0 \\ 
+\Gamma_4 & 0 & \Gamma_8 
+\end{pmatrix} 
+\begin{pmatrix} M_x \\ M_y \\ M_z \end{pmatrix}
+\end{empheq}
+\end{subequations}
+
+由于载机一般关于$xz$平面对称，转动惯量矩阵$J$可简化为：
+
+\begin{equation}
+\label{eq:1.2}
+J = \begin{pmatrix} 
+J_x & 0 & J_{xz} \\ 
+0 & J_y & 0 \\ 
+J_{xz} & 0 & J_z 
+\end{pmatrix}
+\end{equation}
+
+其中$J_x, J_y, J_z$分别为绕$x, y, z$轴的转动惯量，$J_{xz}$为惯量积。公式(1.1)中的惯性耦合系数分别为$\Gamma_1 = \frac{J_{xz}(J_x - J_y + J_z)}{\Gamma}$，$\Gamma_2 = \frac{J_z(J_z - J_y) + J_{xz}^2}{\Gamma}$，$\Gamma_3 = \frac{J_z}{\Gamma}$，$\Gamma_4 = \frac{J_{xz}}{\Gamma}$，$\Gamma_5 = \frac{J_z - J_x}{J_y}$，$\Gamma_6 = \frac{J_{xz}}{J_y}$，$\Gamma_7 = \frac{(J_x - J_y)J_x + J_{xz}^2}{\Gamma}$，$\Gamma_8 = \frac{J_x}{\Gamma}$，式中辅助变量$\Gamma = J_x J_z - J_{xz}^2$。从公式(1.1)可以看出，载机的角加速度$(\dot{p}, \dot{q}, \dot{r})$与合外力矩$(M_x, M_y, M_z)$以及当前角速度$(p,q,r)$相关；载机的加速度$(\dot{u}, \dot{v}, \dot{w})$不仅受到各个方向的合外力$(f_x, f_y, f_z)$影响，还与载机的角速度$(p,q,r)$和平动速度$(u,v,w)$相关，载机的加速度与角速度之间存在耦合关系。
+
+载机和稳定框架之间通过悬挂或者减震球柔性连接，可以隔绝一定频率和振幅的干扰，但是无法隔离所有的干扰。载机由于自身任务发生姿态或者加速度改变时，姿态变化会作用在稳定框架上引起载机基座角速度的改变，载机加减速或高度急剧改变时会对框架产生惯性力，从而对框架产生干扰力矩。
+
+\textbf{载机简化动力学模型}
+\label{subsec:aircraft_simplified}
+
+为在不明显牺牲精度的前提下降低载机层建模的复杂度，本文在式\eqref{eq:1.1}给出的12维完整动力学模型基础上，引入一种基于``协调转弯''假设和一阶滞后环节的任务驱动简化模型。该模型的目标是在低至中频的控制与建模，用少量参数表征载机姿态角速度的主要动态特性，并为后续的三级联合模型提供外部扰动角速度输入
+
+该简化模型的建立基于若干假设。首先，假定载机工作于近配平工况，即选定一个配平点 $\Pi=\{\bar V,\ \bar h,\ \bar\alpha,\ \bar\beta\simeq 0\}$，空速 $V(t)$ 在该点附近缓慢变化。其次，采用协调转弯假设，认为侧滑角近似为零（$\beta \approx 0$），飞机的横向加速度完全由机体滚转产生的向心力提供。此外，基于小角度、小速率假设，认为姿态角 $|\phi|,|\theta|$ 及角速率 $|p|,|q|,|r|$ 均为小扰动量，从而可以忽略高阶耦合项与非定常气动力在关注频段内的影响。最后，假定任务层的几何指令已知，即滚转/俯仰指令 $\phi_c(t),\ \theta_c(t)$ 或转弯半径 $R(t)$ 等为已知时变输入。
+
+基于以上假设，可建立从任务几何指令到载机姿态积分的级联动态方程，其公式如下：
+\begin{subequations}
+\label{eq:task_lag_chain}
+\begin{empheq}[left=\empheqlbrace]{align}
+&r_{\mathrm{cmd}}(t) = \frac{g}{V(t)}\tan\phi_c(t),
+\quad 
+\phi_c(t)=\arctan\frac{V^2(t)}{g\,R(t)}
+\label{eq:task_geo} \\
+&p_{\mathrm{cmd}}(t) \approx \dot{\phi}_c(t),
+\qquad
+q_{\mathrm{cmd}}(t) \approx \dot{\theta}_c(t)
+\label{eq:cmd_rates} \\
+&\tau_p \dot p + p = p_{\mathrm{cmd}}(t),
+\quad
+\tau_q \dot q + q = q_{\mathrm{cmd}}(t),
+\quad
+\tau_r \dot r + r = r_{\mathrm{cmd}}(t)
+\label{eq:first_order_lag} \\
+&\dot{\bm\beta} = \bm T(\bm\beta)\,\bm\omega_B,
+\quad
+\bm\beta=\begin{bmatrix}\phi_B&\theta_B&\psi_B\end{bmatrix}^{\!\top},\ 
+\bm\omega_B=\begin{bmatrix}p&q&r\end{bmatrix}^{\!\top}
+\label{eq:kinematics}
+\end{empheq}
+\end{subequations}
+式\eqref{eq:task_geo} 根据协调转弯的几何关系，将任务层的滚转指令（或转弯半径）映射为理想的偏航角速度指令 $r_{\mathrm{cmd}}$。式\eqref{eq:cmd_rates} 则将滚转与俯仰指令的时间导数近似为对应的理想角速度指令 $p_{\mathrm{cmd}}, q_{\mathrm{cmd}}$。随后，式\eqref{eq:first_order_lag} 采用三轴独立的一阶惯性环节来等效真实飞机"控制面偏转-气动力矩-惯量-飞控反馈"所构成的复杂闭环系统的动态响应带宽，其时间常数 $\tau_p,\tau_q,\tau_r$ 可由飞行数据的阶跃或扫频响应辨识得到。最后，式\eqref{eq:kinematics} 保留了标准的姿态运动学积分方程，用以根据角速度求解姿态角，其中姿态变换矩阵 $\bm T(\bm\beta)$ 的具体形式如下：
+\begin{equation}
+\label{eq:Tmatrix}
+\bm T(\bm\beta)
+=
+\begin{bmatrix}
+1 & \sin\phi_B \tan\theta_B & \cos\phi_B \tan\theta_B \\
+0 & \cos\phi_B               & -\sin\phi_B              \\
+0 & \dfrac{\sin\phi_B}{\cos\theta_B} & \dfrac{\cos\phi_B}{\cos\theta_B}
+\end{bmatrix}.
+\end{equation}
+在一体化建模与线性控制器设计中，通常引入``小角度、小速率''假设，即滚转角 $\phi_B$ 和俯仰角 $\theta_B$ 足够小，此时 $\sin\phi_B \approx \phi_B, \cos\phi_B \approx 1, \tan\theta_B \approx \theta_B, \cos\theta_B \approx 1$。在此条件下，姿态变换矩阵 $\bm T(\bm\beta)$ 可以近似为单位矩阵 $\bm I$：
+\begin{equation}
+\label{eq:T_approx_I_detailed}
+\bm T(\bm\beta)
+\approx
+\begin{bmatrix}
+1 & \phi_B \theta_B & \theta_B \\
+0 & 1 & -\phi_B \\
+0 & \phi_B & 1
+\end{bmatrix}
+\approx \bm I
+\end{equation}
+其中，通过忽略二阶小量 $\phi_B\theta_B$ 以及一阶小量 $\pm\phi_B, \theta_B$，该矩阵简化为单位阵。于是，运动学方程\eqref{eq:kinematics}简化为如下的纯积分关系：
+\begin{equation}
+\label{eq:kinematics_simplified}
+\dot{\bm\beta} \approx \bm\omega_B,
+\quad \text{即} \quad
+\begin{bmatrix} \dot{\phi}_B \\ \dot{\theta}_B \\ \dot{\psi}_B \end{bmatrix} \approx \begin{bmatrix} p \\ q \\ r \end{bmatrix}
+\end{equation}
+  
+该简化模型与本文后续的三级联合模型通过扰动输入通道进行级联。同时，该角速度通过式\eqref{eq:kinematics} 积分得到的载机姿态角 $\bm\beta=[\phi_B,\theta_B,\psi_B]^\top$，在输出方程中通过线性叠加的方式影响最终的视轴指向，即 $\bm y=\bm H[\eta,\xi,\gamma_y,\gamma_x]^{\!\top}+\bm J_B\,\bm\beta$。
+
+
+\section{伺服框架建模与分析}
+
+% 在此填写1.2节内容
+稳定框架搭载于上层载机平台，因此载机的姿态运动将通过机械耦合传递至框架基座。对框架自身的视轴控制器而言，这种来自基座的运动可视为一种外部干扰。本节将分析载机层面的动力学以及载机受到干扰引起的姿态变化。
+本文所研究的两轴两框架伺服稳定框架如图~\ref{fig:3}所示。它的结构从外到内分别由基座、方位框架和俯仰框架组成，可见光相机、夜间成像红外相机、激光测距仪等有效光电载荷安装于俯仰框架上。安装于俯仰框架上的POS系统提供光电吊舱指向视轴在惯性空间中的姿态变化信息，安装于框架转轴上的陀螺仪和编码器分别提供框架的角速度信息和非惯性空间下的位置信息。
+采用两个永磁同步电机对方位框架和俯仰框架直接驱动，以保证低速运行时提供足够大的扭矩。控制器根据以上传感器的量测数据与期望指向之间的误差生成控制信号，通过功率放大器来驱动电机生成力矩，补偿来自载机机动、螺旋桨震动、目标移动等外界对传感器的干扰，从而消除误差完成机载光电吊舱的视轴稳定或跟踪。
+
+\subsection{坐标及符号说明}
+
+% 在此填写1.2.1节内容
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{pic_new/image34.png}
+    \caption{稳定框架坐标系定义}
+    \label{fig:3}
+\end{figure}
+
+如图~\ref{fig:3}所示，定义如下坐标系：惯性坐标系 $\{I\}$；基座坐标系 $\{B\}$，与载机固连；方位坐标系 $\{A\}$，固连于方位框架，由基座坐标系$\{B\}$绕$z_B$轴旋转$\eta$得到；俯仰坐标系 $\{E\}$，固连于俯仰框架，由方位坐标系$\{A\}$绕$y_A$轴旋转$\xi$得到。
+因此，三个坐标系之间有如下变换关系：
+\begin{equation}
+\label{eq:1.4}
+\bm{R}_A^B = \begin{bmatrix} \cos\eta & -\sin\eta & 0 \\ \sin\eta & \cos\eta & 0 \\ 0 & 0 & 1 \end{bmatrix}, \quad
+\bm{R}_E^A = \begin{bmatrix} \cos\xi & 0 & \sin\xi \\ 0 & 1 & 0 \\ -\sin\xi & 0 & \cos\xi \end{bmatrix}
+\end{equation}
+其中，$\bm{R}_A^B$ 表示从坐标系 $\{A\}$ 到坐标系 $\{B\}$ 的变换矩阵，$\bm{R}_E^A$ 表示从坐标系 $\{E\}$ 到坐标系 $\{A\}$ 的变换矩阵。
+
+\subsection{运动学建模}
+
+% 在此填写1.2.2节内容
+机载光电吊舱中有效载荷的视轴运动主要包含两部分内容：一方面方位框架和俯仰框架的运动会直接驱动载荷的视轴在惯性空间中运动；另一方面，载机的运动也会通过基座的机械连接传递至方位框架，并经由方位框架与俯仰框架之间的耦合，最终共同影响光电吊舱的视轴稳定。。
+定义 $\bm{\omega}_B, \bm{\omega}_A, \bm{\omega}_E$ 分别为基座、方位框、俯仰框在各自坐标系下的惯性角速度。由空间几何坐标变换可得到如下关系：
+\begin{align}
+\bm{\omega}_A &= \bm{R}_B^A \bm{\omega}_B + \dot{\eta} \bm{z}_A \label{eq:1.5} \\
+\dot{\bm{\omega}}_A &= \bm{R}_B^A \dot{\bm{\omega}}_B + \dot{\bm{R}}_B^A \bm{\omega}_B + \ddot{\eta}\bm{z}_A \label{eq:1.6} \\
+\bm{\omega}_E &= \bm{R}_A^E \bm{\omega}_A + \dot{\xi} \bm{y}_E \label{eq:1.7} \\
+\dot{\bm{\omega}}_E &= \bm{R}_A^E \dot{\bm{\omega}}_A + \dot{\bm{R}}_A^E \bm{\omega}_A + \ddot{\xi}\bm{y}_E \label{eq:1.8}
+\end{align}
+其中 $\bm{R}_B^A = (\bm{R}_A^B)^T$, $\bm{R}_A^E = (\bm{R}_E^A)^T$。将式 \eqref{eq:1.5} 代入 \eqref{eq:1.7} 可得载机角运动到俯仰框架的完整传递关系：
+\begin{equation}
+\label{eq:1.9}
+\bm{\omega}_E = \bm{R}_A^E (\bm{R}_B^A \bm{\omega}_B + \dot{\eta} \bm{z}_A) + \dot{\xi} \bm{y}_E
+\end{equation}
+
+\subsection{动力学建模}
+
+% 在此填写1.2.3节内容
+常见的光电吊舱框架动力学建模方式中，通常认为方位框架和俯仰框架都是绕各自转轴旋转的刚体，且质量中心位与各自转轴上，且质量均匀分布即转动惯量为对角阵。但实际制造装配中，由于不是完美配平，重心会偏移框架方位、俯仰旋转轴的中心，导致了未配平力，载机环境存在线振动，导致了各个轴产生了未配平力矩，对稳定精度造成了影响；实际制造工艺无法保证质量相对质心均匀分布，稳定框架的转动质量也无法完全平衡，因此，在其方位框架和俯仰框架的转动惯量矩阵中，非对角线元素（惯量积）一般不为零，各框架质心到转轴的距离一般不为零。
+\begin{equation}
+\label{eq:1.11}
+\bm{I} = \begin{bmatrix} I_{xx} & I_{xy} & I_{xz} \\ I_{yx} & I_{yy} & I_{yz} \\ I_{zx} & I_{zy} & I_{zz} \end{bmatrix}
+\end{equation}
+1)	俯仰框架动力学
+根据Newton-Euler刚体动力学方程，可得俯仰框架的动力学方程为
+\begin{equation}
+\label{eq:1.12}
+\bm{M}_E = \dot{\bm{L}}_E = \bm{I}_E \dot{\bm{\omega}}_E + \bm{\omega}_E \times (\bm{I}_E \bm{\omega}_E)
+\end{equation}
+\begin{equation}
+\label{eq:1.13}
+\bm{M}_E = \bm{T}_{mE} + \bm{T}_{uE} + \bm{T}_{fE}
+\end{equation}
+其中 $\bm{M}_E$ 为俯仰框架受到的合总力矩，$\bm{T}_{mE}$ 为俯仰框架电机输出的力矩，$\bm{T}_{uE}$ 为俯仰框架上的未配平力矩，$\bm{T}_{fE}$ 是框架之间相对转动引起的摩擦力矩，$\bm{L}_E$ 为俯仰框架的角动量。
+2)	方位框架动力学
+类似的，整理得方位框架的动力学如下：
+\begin{equation}
+\label{eq:1.14}
+\bm{M}_A = \dot{\bm{L}}_A = \bm{I}_A \dot{\bm{\omega}}_A + \bm{\omega}_A \times (\bm{I}_A \bm{\omega}_A)
+\end{equation}
+\begin{equation}
+\label{eq:1.15}
+\bm{M}_A = \bm{T}_{mA} + \bm{T}_{uA} + \bm{T}_{fA}
+\end{equation}
+其中 $\bm{M}_A$ 为方位框架受到的合总力矩，$\bm{T}_{mA}$ 为方位框架电机输出的力矩，$\bm{T}_{uA}$ 为方位框架上的未配平力矩，$\bm{T}_{fA}$ 是框架之间相对转动引起的摩擦力矩，$\bm{L}_A$ 为方位框架的角动量。
+
+\textbf{系统整体耦合动力学表征}
+
+将基座、方位框架、俯仰框架的动力学进行整合与线性化，可以得到描述整个系统振动特性的统一矩阵方程。该推导过程基于前述的牛顿-欧拉方程，并引入线性化假设，其形式对于频域分析和系统级控制设计至关重要。
+
+首先，我们将吊舱基座与载机之间的隔振系统简化为一个线性的二阶质量-弹簧-阻尼系统，其输入为来自载机机体的振动加速度 $\bm{a}_b$。其次，对方位和俯仰框架的非线性动力学方程 \eqref{eq:1.12} 和 \eqref{eq:1.14} 进行线性化处理：我们假设系统在小角速度下运行，忽略非线性的陀螺力矩项 $\bm{\omega} \times (\bm{I} \bm{\omega})$；同时，将复杂的摩擦力矩近似为线性的粘性阻尼项。
+
+综合以上模型，整个系统的耦合动力学方程可以写作：
+\begin{equation}
+\label{eq:coupled_system_matrix}
+\underbrace{
+\begin{bmatrix}
+    \bm{M}_B & \bm{0} & \bm{0} \\
+    \bm{0} & \bm{I}_A & \bm{0} \\
+    \bm{0} & \bm{0} & \bm{I}_E
+\end{bmatrix}
+}_{\bm{M}_{\text{sys}}}
+\begin{bmatrix}
+    \bm{\ddot{x}}_B \\ \bm{\dot{\omega}}_A \\ \bm{\dot{\omega}}_E
+\end{bmatrix}
++
+\underbrace{
+\begin{bmatrix}
+    \bm{C}_B & \bm{0} & \bm{0} \\
+    \bm{0} & \bm{C}_A & \bm{0} \\
+    \bm{0} & \bm{0} & \bm{C}_E
+\end{bmatrix}
+}_{\bm{C}_{\text{sys}}}
+\begin{bmatrix}
+    \bm{\dot{x}}_B \\ \bm{\omega}_A \\ \bm{\omega}_E
+\end{bmatrix}
++
+\underbrace{
+\begin{bmatrix}
+    \bm{K}_B & \bm{0} & \bm{0} \\
+    \bm{0} & \bm{K}_A & \bm{0} \\
+    \bm{0} & \bm{0} & \bm{K}_E
+\end{bmatrix}
+}_{\bm{K}_{\text{sys}}}
+\begin{bmatrix}
+    \bm{x}_B \\ \bm{\theta}_A \\ \bm{\theta}_E
+\end{bmatrix}
+=
+\begin{bmatrix}
+    - \bm{M}_B \bm{a}_b(t) \\
+    \bm{T}_{A,\text{act}} + \bm{T}_{uA} \\
+    \bm{T}_{E,\text{act}} + \bm{T}_{uE}
+\end{bmatrix} \\
+\end{equation}
+其中，$\bm{M}_{\text{sys}}$, $\bm{C}_{\text{sys}}$, 和 $\bm{K}_{\text{sys}}$ 分别是系统的广义质量/惯量、阻尼和刚度矩阵。该方程统一了式 \eqref{eq:1.12} 和 \eqref{eq:1.14} 所描述的刚体动力学以及基座的振动传递特性，是后续进行系统振动分析的基础。
+
+\clearpage
+\section{精密跟踪层建模与分析}
+
+快反镜作为精密跟踪子系统的核心机构，其动力学模型由反射镜的机械结构与驱动执行器共同建立。本节将首先建立FSM的柔性支承机械动力学模型，随后分别讨论音圈电机(VCM)和压电陶瓷(PZT)两种执行器与其耦合的方式。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{pic_new/fsm.png}
+    \caption{快反镜结构示意图}
+    \label{fig:4}
+\end{figure}
+
+快反镜安装在稳定框架上，可设快反镜相对于内框架的旋转变换矩阵为：
+\begin{equation}
+\label{eq:1.16}
+\bm{R}_F^E = \bm{R}_z(\gamma_z) \bm{R}_y(\gamma_y) \bm{R}_x(\gamma_x)
+\end{equation}
+其中 $\gamma_x, \gamma_y, \gamma_z$ 分别是快反镜和内框架绕 $x, y, z$ 轴的旋转。由于只关心快反镜的指向，本节不考虑快反镜相对于框架的平移量。
+
+\subsection{FSM通用动力学模型}
+
+FSM单轴的通用机械动力学可表征为一个二阶旋转系统，其核心参数包括反射镜的转动惯量 $J$ 和柔性支撑的扭转刚度 $K_{\theta}$。该系统的动态方程可概括为：
+\begin{equation}
+\label{eq:fsm_generic_dynamics}
+J\ddot{\theta} + c_m\dot{\theta} + K_{\theta}\theta = M_{act}
+\end{equation}
+其中 $\theta$ 为反射镜转角， $c_m$ 为等效机械阻尼， $M_{act}$ 为驱动执行器施加的广义力矩。
+
+\subsection{基于VCM的FSM深耦合模型}
+
+当采用音圈电机(VCM)作为执行器时， $M_{act}$ 由VCM提供。此时，VCM执行器自身的动态特性，如动子质量 $m_c$ 和阻尼 $c$ ，会与FSM的通用动力学($J, K_{\theta}$)深度耦合。
+
+如图~\ref{fig:4}所示，该耦合系统的单轴动力学模型可表示为：
+\begin{equation}
+\label{eq:1.17}
+M = (J + 2m_c l^2) \ddot{\theta} + 2cl^2 \dot{\theta} + 2K_\theta \theta
+\end{equation}
+在此式中， $M$ 为VCM输出的总驱动力矩，$l$ 为动子安装位置距转轴中心的距离。
+
+VCM的电气方程和力-电流关系进一步描述了驱动力矩 $M$ 是如何产生的：
+\begin{equation}
+\label{eq:1.18}
+\begin{cases}
+u(t) = L \frac{d i(t)}{dt} + R i(t) + K_e \dot{x}(t) \\
+F_x(t) = K_c i(t)
+\end{cases}
+\end{equation}
+其中 $u,i,L,R$ 分别为VCM的输入电压、电流、电感和电阻。 $K_{e}$ 为反电动势系数， $K_{c}$ 为电机力常数。动子位移 $x(t)$ 近似等于 $l\theta(t)$，总力矩 $M(t)$ 则等于 $2lF_{x}(t)$。
+
+联立式 \eqref{eq:1.17} 和式 \eqref{eq:1.18}，可推导出系统输入电压 $u(t)$ 与反射镜转角 $\theta(t)$ 之间的三阶微分方程，该方程完整地描述了FSM-VCM的机电耦合动态：
+\begin{equation}
+\label{eq:1.19}
+u = \frac{L(J+2m_c l^2)}{2lK_c} \dddot{\theta} + \frac{R(J+2m_c l^2)+2Lcl^2}{2lK_c} \ddot{\theta} + \left( \frac{2RK_\theta+2Lcl^2}{2lK_c} + K_e l \right) \dot{\theta} + \frac{2RK_\theta}{2lK_c}\theta
+\end{equation}
+
+\subsection{基于压电陶瓷(PZT)的FSM模型}
+
+与VCM的驱动方式不同，当FSM采用压电陶瓷(PZT)驱动时，系统通过调整 $u_{F1}$ 至 $u_{F4}$ 四个压电陶瓷的驱动电压，使其产生不同的伸缩量 $L_{F1}$ 至 $L_{F4}$，从而控制镜面偏转。其运动学关系可表征为：
+\begin{equation}
+\label{eq:fsm_pzt_kinematics}
+\begin{cases}
+    \theta_x = \arctan\left( \frac{L_{F2} - L_{F4}}{2L_M} \right) \\
+    \theta_y = \arctan\left( \frac{L_{F1} - L_{F3}}{2L_M} \right)
+\end{cases}
+\end{equation}
+其中 $\theta_x$ 和 $\theta_y$ 分别为镜面绕X轴和Y轴的转角，$L_M$ 为各压电陶瓷到镜面中心的径向距离。
+
+假设各压电陶瓷动态相同，取单轴进行分析。其动力学模型可表征为一个二阶质量-弹簧-阻尼系统：
+\begin{equation}
+\label{eq:fsm_pzt_dynamics}
+m_F \ddot{x}_F + b_F \dot{x}_F + k_F x_F = k_F (d_F u_F - h) + p_F
+\end{equation}
+此式中，$x_F$ 为压电陶瓷的实际输出位移，$u_F$ 为驱动电压。$m_F$, $b_F$ 和 $k_F$ 分别表示PZT驱动FSM镜面机构的等效质量、阻尼系数与刚度系数。$d_F$ 为压电系数，使得 $k_F d_F u_F$ 构成理想的驱动力。$h$ 表示由压电陶瓷迟滞效应导致的等效位移干扰，$p_F$ 表示系统所受的未知集总干扰影响。PZT的迟滞干扰特性 $h$ 极为显著，将在第 \ref{chap:2} 章中作为非线性干扰进行详细表征。
+
+\section{三级系统一体化模型}
+
+为便于后续控制算法的设计与稳定性分析，需从前述非线性微分方程组中提取系统的核心线性主部。本节基于小偏差线性化原理，将各子系统间的运动学耦合、动力学耦合以及非线性摩擦等因素统一视为系统的广义干扰，从而构建包含干扰通道的线性时不变状态空间模型。
+
+为获得该简化模型，在``小角度、小速率、无干扰''的假设下，对三级系统分别进行简化。
+
+\subsection{载机层模型简化}
+\begin{equation}
+\label{eq:simp_aircraft}
+\dot{\bm\beta} = \underbrace{\bm T(\bm\beta)}_{\approx\bm{I}}\,\bm\omega_B 
+\end{equation}
+
+对于载机层，其简化处理基于第 \ref{subsec:aircraft_simplified} 节所阐述的小角度假设。如式 \eqref{eq:simp_aircraft} 所示，姿态变换矩阵 $\bm T(\bm\beta)$ 近似为单位矩阵，从而将精确的运动学方程 \eqref{eq:kinematics} 简化。在一体化模型中，载机角速度 $\bm\omega_B$ 视为已知的外部扰动输入信号，直接驱动载机姿态角 $\bm\beta$。
+
+\subsection{框架层模型简化}
+
+对于伺服框架层，其线性化处理基于小角速度假设。在第\ref{chap:1}章中已建立了方位框架和俯仰框架的完整非线性动力学方程，即式 \eqref{eq:1.14} 和 \eqref{eq:1.12}。
+
+在小角速度假设下，方位框架角速度 $\bm{\omega}_A$ 和俯仰框架角速度 $\bm{\omega}_E$ 均为小量。因此，方程中的二次非线性项即陀螺力矩项 $\bm{\omega} \times (\bm{I} \bm{\omega})$ 可以忽略，简化过程如下。
+
+方位框架对应式 \eqref{eq:1.14}：
+\begin{equation}
+\label{eq:simp_gimbal_A}
+\bm{M}_A = \bm{I}_A \dot{\bm{\omega}}_A + \underbrace{\bm{\omega}_A \times (\bm{I}_A \bm{\omega}_A)}_{\approx \bm{0}} \approx \bm{I}_A \dot{\bm{\omega}}_A
+\end{equation}
+
+俯仰框架对应式 \eqref{eq:1.12}：
+\begin{equation}
+\label{eq:simp_gimbal_E}
+\bm{M}_E = \bm{I}_E \dot{\bm{\omega}}_E + \underbrace{\bm{\omega}_E \times (\bm{I}_E \bm{\omega}_E)}_{\approx \bm{0}} \approx \bm{I}_E \dot{\bm{\omega}}_E
+\end{equation}
+
+同时，在无干扰的核心假设下，转轴摩擦与未配平力矩等非线性干扰设置为零。此时系统动态仅保留刚体转动惯量与伺服电机电气特性的耦合，从而得到一体化模型中线性的方位轴 $\bm A_A$ 与俯仰轴 $\bm A_E$ 子矩阵。
+
+\subsection{快反镜层模型简化}
+\begin{equation}
+\label{eq:simp_fsm}
+u(t) = A_3 \dddot{\theta} + A_2 \ddot{\theta} + A_1 \dot{\theta} + A_0 \theta
+\end{equation}
+
+快反镜子系统的处理方式为保留其动态，简化其非线性干扰。在第\ref{chap:1}章建立的动力学模型（式\eqref{eq:1.17}至\eqref{eq:1.19}）本身即为线性的三阶微分方程，已揭示其机电耦合动态。如式\eqref{eq:simp_fsm}所示，该动态可概括为联系输入电压 $u(t)$ 和输出转角 $\theta(t)$ 的三阶线性常微分方程。
+
+其中 $A_3, A_2, A_1, A_0$ 由式\eqref{eq:1.19}中的物理参数组合而成。通过对比式 \eqref{eq:simp_fsm} 和式 \eqref{eq:1.19}，可得各系数的具体形式如下：
+\begin{subequations}
+\label{eq:fsm_coeffs_full}
+\begin{align}
+A_3 &= \frac{L(J+2m_c l^2)}{2lK_c} \\
+A_2 &= \frac{R(J+2m_c l^2)+2Lcl^2}{2lK_c} \\
+A_1 &= \left( \frac{2RK_\theta+2Rcl^2}{2lK_c} + K_e l \right) \\
+A_0 &= \frac{2RK_\theta}{2lK_c}
+\end{align}
+\end{subequations}
+
+在构建一体化模型时，直接保留此三阶动态特性。其简化过程主要体现在忽略非线性干扰，从而得到线性的 $\bm A_{Fx}$ 与 $\bm A_{Fy}$ 子矩阵。
+
+\subsection{状态空间方程}
+
+综合载机姿态运动学、框架机电动力学及快反镜压电或音圈动力学，建立三级联合系统的广义状态空间方程如下：
+\begin{equation}
+\label{eq:sys_state}
+\begin{cases}
+\dot{\bm{x}}(t) = \bm{A}\bm{x}(t) + \bm{B}\bm{u}(t) + \bm{E}\bm{d}(t) \\
+\bm{y}(t) = \bm{C}\bm{x}(t)
+\end{cases}
+\end{equation}
+
+式中各项定义如下。$\bm{x}(t) \in \mathbb{R}^{15}$ 为系统全维状态向量，涵盖了从载机姿态到电流动态的完整层级信息，具体表示为 $\bm{x} = [\eta, \omega_A, i_A, \xi, \omega_E, i_E, \gamma_x, \omega_{Fx}, i_{Fx}, \gamma_y, \omega_{Fy}, i_{Fy}, \phi_B, \theta_B, \psi_B]^T$。前十二维分量对应方位框架、俯仰框架及快反镜两轴的角位置、角速度与驱动电流，后三维分量对应载机的滚转角、俯仰角与偏航角。
+
+$\bm{u}(t) \in \mathbb{R}^{7}$ 为系统的广义输入向量，由控制输入与可测扰动输入共同构成，即 $\bm{u} = [u_A, u_E, u_{Fx}, u_{Fy}, p, q, r]^T$。前四维分量为各轴电机的驱动电压，后三维分量为载机三轴角速度。
+
+$\bm{A} \in \mathbb{R}^{15 \times 15}$ 为系统状态矩阵，描述系统内部的标称动态特性。基于前述各节的推导，该矩阵呈分块对角形式，其完整表达式为：
+\begin{equation}
+\label{eq:A_matrix}
+\bm{A} = \begin{bmatrix}
+\bm{A}_A & \bm{0} & \bm{0} & \bm{0} & \bm{0} \\
+\bm{0} & \bm{A}_E & \bm{0} & \bm{0} & \bm{0} \\
+\bm{0} & \bm{0} & \bm{A}_{Fx} & \bm{0} & \bm{0} \\
+\bm{0} & \bm{0} & \bm{0} & \bm{A}_{Fy} & \bm{0} \\
+\bm{0} & \bm{0} & \bm{0} & \bm{0} & \bm{0}_{3\times3}
+\end{bmatrix}
+\end{equation}
+其中子矩阵 $\bm{A}_A, \bm{A}_E$ 及 $\bm{A}_{Fx}, \bm{A}_{Fy}$ 表征伺服框架与快反镜的三阶机电耦合特性。方位轴和俯仰轴的子矩阵分别为：
+\[
+\bm A_A=\begin{bmatrix}
+0 & 1 & 0\\[2pt]
+-\tfrac{k_A}{J_A} & -\tfrac{b_A}{J_A} & \tfrac{K_{tA}}{J_A}\\[4pt]
+0 & -\tfrac{K_{eA}}{L_A} & -\tfrac{R_A}{L_A}
+\end{bmatrix},\quad
+\bm A_E=\begin{bmatrix}
+0 & 1 & 0\\[2pt]
+-\tfrac{k_E}{J_E} & -\tfrac{b_E}{J_E} & \tfrac{K_{tE}}{J_E}\\[4pt]
+0 & -\tfrac{K_{eE}}{L_E} & -\tfrac{R_E}{L_E}
+\end{bmatrix}
+\]
+快反镜两轴动力学特性相同，其子矩阵为：
+\[
+\bm A_{Fx}=\bm A_{Fy}=
+\begin{bmatrix}
+0 & 1 & 0\\[2pt]
+-\tfrac{2K_\theta}{J_F+2m_cl^2} & -\tfrac{2cl^2}{J_F+2m_cl^2} & \tfrac{2lK_c}{J_F+2m_cl^2}\\[6pt]
+0 & -\tfrac{K_e l}{L_F} & -\tfrac{R_F}{L_F}
+\end{bmatrix}
+\]
+
+$\bm{B} \in \mathbb{R}^{15 \times 7}$ 为输入矩阵，其完整形式为：
+\begin{equation}
+\label{eq:B_matrix}
+\bm{B} = \begin{bmatrix}
+\bm{b}_A & \bm{0} & \bm{0} & \bm{0} & \bm{0}_{3\times3} \\
+\bm{0} & \bm{b}_E & \bm{0} & \bm{0} & \bm{0}_{3\times3} \\
+\bm{0} & \bm{0} & \bm{b}_{Fx} & \bm{0} & \bm{0}_{3\times3} \\
+\bm{0} & \bm{0} & \bm{0} & \bm{b}_{Fy} & \bm{0}_{3\times3} \\
+\bm{0}_{3\times1} & \bm{0}_{3\times1} & \bm{0}_{3\times1} & \bm{0}_{3\times1} & \bm{I}_3
+\end{bmatrix}
+\end{equation}
+其中 $\bm{b}_A=[0,0,1/L_A]^T$, $\bm{b}_E=[0,0,1/L_E]^T$, $\bm{b}_{Fx}=\bm{b}_{Fy}=[0,0,1/L_F]^T$。左上子块描述电压输入对电流状态的直接控制作用，右下子块 $\bm{I}_3$ 表征载机角速度 $\bm{\omega}_B=[p,q,r]^T$ 对载机姿态 $\bm{\beta}$ 的积分驱动作用。
+
+$\bm{C} \in \mathbb{R}^{2 \times 15}$ 为输出矩阵，描述状态向量与视轴指向误差 $\bm{y}=[\theta_{\text{LOS,Az}}, \theta_{\text{LOS,El}}]^T$ 之间的几何映射关系。该矩阵可表示为 $\bm{C} = [\bm{C}_{12} \mid \bm{K}_B]$，其结构为：
+\begin{equation}
+\label{eq:C_matrix}
+\bm{C}_{12} \in \mathbb{R}^{2\times12}, \quad \bm{K}_B \in \mathbb{R}^{2\times3}
+\end{equation}
+其中 $\bm{C}_{12}$ 仅在特定位置有非零元素：方位视轴输出第1列和第8列分别为1和2，提取 $\eta$ 和 $2\gamma_y$；俯仰视轴输出第4列和第7列分别为1和2，提取 $\xi$ 和 $2\gamma_x$，系数2体现了快反镜的光学倍增效应。$\bm{K}_B$ 是由安装几何关系决定的常值矩阵，将载机姿态扰动 $\bm\beta$ 映射到视轴角度上。
+
+$\bm{d}(t)$ 为系统的集总干扰向量，$\bm{E} \in \mathbb{R}^{15 \times n_d}$ 为对应的干扰分布矩阵。该项在标称模型中显式保留，用于表征被线性化过程忽略的非线性因素。干扰分布矩阵的结构为：
+\begin{equation}
+\label{eq:E_matrix}
+\bm{E} = \begin{bmatrix}
+\bm{E}_A & \bm{0} & \bm{0} & \bm{0} \\
+\bm{0} & \bm{E}_E & \bm{0} & \bm{0} \\
+\bm{0} & \bm{0} & \bm{E}_{Fx} & \bm{0} \\
+\bm{0} & \bm{0} & \bm{0} & \bm{E}_{Fy} \\
+\bm{0} & \bm{0} & \bm{0} & \bm{0}
+\end{bmatrix}
+\end{equation}
+其中各子矩阵 $\bm{E}_A, \bm{E}_E, \bm{E}_{Fx}, \bm{E}_{Fy}$ 描述干扰作用于各轴的方式。具体而言，$\bm{d}(t)$ 包含陀螺耦合力矩 $\bm{\omega} \times (\bm{I}\bm{\omega})$、LuGre非线性摩擦力矩 $T_f$ 以及质量不平衡力矩 $T_u$。在控制系统设计中，该项作为需观测和抑制的对象，体现模型对深耦合特性的理论兼容。
+
+\subsection{模型分析}
+
+上述一体化模型在形式上将复杂的机载光电跟踪系统解耦为线性的名义主部与非线性的干扰剩余项。系统矩阵 $\bm{A}$ 的块对角结构表明，在理想无干扰条件下，各轴运动相互独立。而实际上，各轴之间的深耦合关系并未被物理切断，而是被数学转化为干扰向量 $\bm{d}(t)$ 施加于系统。具体而言，载机运动对框架的牵连、框架间的运动耦合等非线性效应通过干扰通道作用于系统。这种建模方式既满足线性控制理论对模型形式的要求，又保留系统的物理真实性，为后续章节开展多源干扰量化分析及复合抗扰控制设计提供数学框架。
+
+
+%=================================================================
