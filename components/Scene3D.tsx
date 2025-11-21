@@ -1,8 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useRef, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid, PerspectiveCamera, Html, Billboard, Environment, RenderTexture, Text } from '@react-three/drei';
+import { OrbitControls, Grid, PerspectiveCamera, Html, Billboard, Environment, RenderTexture, Text, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { SystemState } from '../types';
+import { logger } from '../utils/logger';
+
+// Configure useGLTF to handle legacy extensions
+if (typeof window !== 'undefined') {
+  logger.log('GLTF loader configured');
+  logger.log('提示：在浏览器控制台输入 downloadLogs() 可以下载调试日志文件');
+}
 
 // Augment JSX namespace to include Three.js elements used by React Three Fiber
 declare global {
@@ -64,59 +71,147 @@ interface SceneContentProps {
   fsmPhysicalRef: React.RefObject<THREE.Group>;
 }
 
-// Target Aircraft Component - scaled up for visibility at distance
-const TargetAircraft: React.FC<{ 
-  position: [number, number, number]; 
+// Fallback Target Aircraft (if GLB fails to load)
+const FallbackTargetAircraft: React.FC<{
+  position: [number, number, number];
   isLocked: boolean;
-  targetMatRef?: React.RefObject<THREE.MeshStandardMaterial>;
-}> = ({ position, isLocked, targetMatRef }) => {
-  const scale = 4; // Scale up for visibility
+}> = ({ position, isLocked }) => {
+  const scale = 4;
   const material = isLocked ? 
     new THREE.MeshStandardMaterial({ color: '#4ade80', roughness: 0.3, metalness: 0.1, emissive: '#4ade80', emissiveIntensity: 0.5 }) :
-    targetAircraftMaterial;
+    new THREE.MeshStandardMaterial({ color: '#ef4444', roughness: 0.3, metalness: 0.1, emissive: '#ef4444', emissiveIntensity: 0.3 });
   const wingMat = isLocked ? 
     new THREE.MeshStandardMaterial({ color: '#22c55e', roughness: 0.4, metalness: 0.1 }) :
-    targetWingMaterial;
+    new THREE.MeshStandardMaterial({ color: '#dc2626', roughness: 0.4, metalness: 0.1 });
 
   return (
     <group position={position} scale={scale}>
-      {/* Fuselage */}
       <mesh rotation={[Math.PI/2, 0, 0]} material={material}>
         <cylinderGeometry args={[0.5, 0.4, 8, 16]} />
       </mesh>
-      {/* Nose */}
       <mesh position={[0, 0, 4.5]} rotation={[Math.PI/2, 0, 0]} material={material}>
         <coneGeometry args={[0.4, 1, 16]} />
       </mesh>
-      {/* Cockpit Window */}
-      <mesh position={[0, 0.35, 2.5]} rotation={[0.2, 0, 0]}>
-        <boxGeometry args={[0.5, 0.3, 1.2]} />
-        <meshStandardMaterial color="#0ea5e9" roughness={0.2} metalness={0.9} />
-      </mesh>
-      
-      {/* Main Wings */}
       <group position={[0, 0, 1]}>
-        <mesh position={[3, 0, 0]} rotation={[0, 0, 0]} material={wingMat}>
+        <mesh position={[3, 0, 0]} material={wingMat}>
           <boxGeometry args={[6, 0.1, 1.5]} />
         </mesh>
-        <mesh position={[-3, 0, 0]} rotation={[0, 0, 0]} material={wingMat}>
+        <mesh position={[-3, 0, 0]} material={wingMat}>
           <boxGeometry args={[6, 0.1, 1.5]} />
         </mesh>
       </group>
-
-      {/* Tail Section */}
       <group position={[0, 0.2, -3.5]}>
-        {/* Vertical Stabilizer */}
         <mesh position={[0, 0.8, 0]} material={wingMat}>
           <boxGeometry args={[0.1, 1.6, 1]} />
         </mesh>
-        {/* Horizontal Stabilizer */}
         <mesh position={[0, 0, 0]} material={wingMat}>
           <boxGeometry args={[3, 0.1, 0.8]} />
         </mesh>
       </group>
     </group>
   );
+};
+
+// F-117 Target Aircraft Component - using fallback due to large file size
+// TODO: Optimize the 26MB GLB file to enable loading
+const TargetAircraft: React.FC<{ 
+  position: [number, number, number]; 
+  isLocked: boolean;
+  targetMatRef?: React.RefObject<THREE.MeshStandardMaterial>;
+}> = ({ position, isLocked, targetMatRef }) => {
+  // Using fallback for now due to 26MB file size causing loading issues
+  return <FallbackTargetAircraft position={position} isLocked={isLocked} />;
+  
+  /* Uncomment when GLB file is optimized:
+  const gltf = useGLTF('/lockheed_f-117_nighthawk.glb');
+  const groupRef = useRef<THREE.Group>(null);
+  
+  React.useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          if (mesh.material) {
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            materials.forEach((mat: THREE.Material) => {
+              if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+                const stdMat = mat as THREE.MeshStandardMaterial;
+                if (isLocked) {
+                  stdMat.emissive.set('#4ade80');
+                  stdMat.emissiveIntensity = 0.3;
+                } else {
+                  stdMat.emissive.set('#ff0000');
+                  stdMat.emissiveIntensity = 0.2;
+                }
+              }
+            });
+          }
+        }
+      });
+    }
+  }, [isLocked]);
+
+  return (
+    <group ref={groupRef} position={position} scale={4}>
+      <primitive object={gltf.scene} />
+    </group>
+  );
+  */
+};
+
+// Wing Loong UAV Component - loaded from GLB
+const WingLoongAircraft: React.FC = () => {
+  try {
+    const gltf = useGLTF('/wing_loong_i_uav_war_thunder.glb');
+    
+    React.useEffect(() => {
+      logger.log('===== Wing Loong 模型加载成功 =====');
+      logger.log('场景信息', {
+        children: gltf.scene.children.length,
+        type: gltf.scene.type
+      });
+      
+      gltf.scene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const mat = mesh.material as THREE.MeshStandardMaterial;
+          
+          const mapImage = mat?.map?.image as any;
+          logger.log(`网格: ${mesh.name}`, {
+            hasMaterial: !!mesh.material,
+            materialType: mat?.type,
+            color: mat?.color ? `rgb(${Math.round(mat.color.r * 255)}, ${Math.round(mat.color.g * 255)}, ${Math.round(mat.color.b * 255)})` : 'none',
+            hasMap: !!mat?.map,
+            hasNormalMap: !!mat?.normalMap,
+            hasMetalnessMap: !!mat?.metalnessMap,
+            hasRoughnessMap: !!mat?.roughnessMap,
+            metalness: mat?.metalness,
+            roughness: mat?.roughness,
+            mapImage: mapImage ? `${mapImage.width}x${mapImage.height}` : 'none',
+            mapColorSpace: (mat?.map as any)?.colorSpace || 'unknown'
+          });
+          
+          // 临时方案：由于GLB文件没有颜色贴图，给模型添加灰蓝色
+          // 这样至少能看到模型的形状和细节
+          if (!mat?.map && mat?.color) {
+            mat.color.setHex(0x8BA5B8); // 灰蓝色，类似无人机的常见颜色
+            mat.metalness = 0.6;
+            mat.roughness = 0.4;
+            logger.log(`为 ${mesh.name} 设置临时颜色（因为没有贴图）`);
+          }
+        }
+      });
+      
+      logger.log('===== 材质检查完成 =====');
+    }, [gltf]);
+    
+    return (
+      <primitive object={gltf.scene} scale={1} />
+    );
+  } catch (error) {
+    logger.error('加载 Wing Loong 模型失败', error);
+    return null;
+  }
 };
 
 
@@ -206,44 +301,9 @@ const SceneContent: React.FC<SceneContentProps> = ({ state, fsmPhysicalRef }) =>
         />
       </group>
 
-      {/* --- STAGE 1: FIXED-WING AIRCRAFT --- */}
+      {/* --- STAGE 1: FIXED-WING AIRCRAFT (Wing Loong UAV) --- */}
       <group ref={aircraftRef}>
-        
-        {/* Fuselage */}
-        <mesh rotation={[Math.PI/2, 0, 0]} material={aircraftMaterial}>
-           <cylinderGeometry args={[0.5, 0.4, 8, 16]} />
-        </mesh>
-        {/* Nose */}
-        <mesh position={[0, 0, 4.5]} rotation={[Math.PI/2, 0, 0]} material={aircraftMaterial}>
-           <coneGeometry args={[0.4, 1, 16]} />
-        </mesh>
-        {/* Cockpit Window */}
-        <mesh position={[0, 0.35, 2.5]} rotation={[0.2, 0, 0]}>
-           <boxGeometry args={[0.5, 0.3, 1.2]} />
-           <meshStandardMaterial color="#0ea5e9" roughness={0.2} metalness={0.9} />
-        </mesh>
-        
-        {/* Main Wings */}
-        <group position={[0, 0, 1]}>
-           <mesh position={[3, 0, 0]} rotation={[0, 0, 0]} material={wingMaterial}>
-              <boxGeometry args={[6, 0.1, 1.5]} />
-           </mesh>
-           <mesh position={[-3, 0, 0]} rotation={[0, 0, 0]} material={wingMaterial}>
-              <boxGeometry args={[6, 0.1, 1.5]} />
-           </mesh>
-        </group>
-
-        {/* Tail Section */}
-        <group position={[0, 0.2, -3.5]}>
-           {/* Vertical Stabilizer */}
-           <mesh position={[0, 0.8, 0]} material={wingMaterial}>
-              <boxGeometry args={[0.1, 1.6, 1]} />
-           </mesh>
-           {/* Horizontal Stabilizer */}
-           <mesh position={[0, 0, 0]} material={wingMaterial}>
-              <boxGeometry args={[3, 0.1, 0.8]} />
-           </mesh>
-        </group>
+        <WingLoongAircraft />
 
         <Html position={[0, 2.5, 0]} center>
           <div className="text-slate-400 text-xs font-mono whitespace-nowrap pointer-events-none select-none">
@@ -410,7 +470,9 @@ const Scene3D: React.FC<{ state: SystemState }> = ({ state }) => {
       <Canvas shadows dpr={[1, 2]}>
         <PerspectiveCamera makeDefault position={[6, 3, 6]} fov={45} near={0.1} far={10000} />
         <OrbitControls target={[0, 0, 0]} minDistance={5} maxDistance={50} />
-        <SceneContent state={state} fsmPhysicalRef={fsmPhysicalRef} />
+        <Suspense fallback={null}>
+          <SceneContent state={state} fsmPhysicalRef={fsmPhysicalRef} />
+        </Suspense>
       </Canvas>
       
       {/* PIP Canvas - Independent rendering */}
@@ -423,7 +485,9 @@ const Scene3D: React.FC<{ state: SystemState }> = ({ state }) => {
           dpr={[1, 1]}
           gl={{ alpha: false, antialias: false }}
         >
-          <PIPScene state={state} fsmPhysicalRef={fsmPhysicalRef} />
+          <Suspense fallback={null}>
+            <PIPScene state={state} fsmPhysicalRef={fsmPhysicalRef} />
+          </Suspense>
         </Canvas>
         
         {/* Reticle / Crosshair */}
@@ -486,5 +550,14 @@ const Scene3D: React.FC<{ state: SystemState }> = ({ state }) => {
     </div>
   );
 };
+
+// Preload the Wing Loong GLB model
+// F-117 is disabled due to 26MB file size
+try {
+  useGLTF.preload('/wing_loong_i_uav_war_thunder.glb');
+  // useGLTF.preload('/lockheed_f-117_nighthawk.glb'); // Disabled - file too large
+} catch (error) {
+  console.warn('Failed to preload GLB model:', error);
+}
 
 export default Scene3D;

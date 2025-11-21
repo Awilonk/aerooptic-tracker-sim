@@ -2,6 +2,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { SystemState, SimulationParams, SimulationMode, FSMActuatorType } from '../types';
 import { INITIAL_PARAMS } from '../constants';
+import { logger } from '../utils/logger';
 
 interface DashboardProps {
   history: SystemState[];
@@ -76,13 +77,22 @@ const Dashboard: React.FC<DashboardProps> = ({
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
             系统参数配置
           </h2>
-          <button
-            onClick={() => setParams(INITIAL_PARAMS)}
-            className="text-[10px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded border border-slate-600 hover:border-slate-500 transition-all"
-            title="恢复默认设置"
-          >
-            重置
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => logger.downloadLogs()}
+              className="text-[10px] px-2 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded border border-blue-600 hover:border-blue-500 transition-all"
+              title="下载调试日志文件"
+            >
+              📥 下载日志
+            </button>
+            <button
+              onClick={() => setParams(INITIAL_PARAMS)}
+              className="text-[10px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded border border-slate-600 hover:border-slate-500 transition-all"
+              title="恢复默认设置"
+            >
+              重置
+            </button>
+          </div>
         </div>
         
         <div className="space-y-4">
